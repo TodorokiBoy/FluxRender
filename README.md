@@ -6,9 +6,9 @@ FluxRender is not just a plotting library; it is a dynamic, Taichi-powered evalu
 
 By combining an intelligent, zero-redundancy math engine with native HSL color interpolation and adaptive spatial grids, FluxRender allows you to explore chaotic attractors, fluid dynamics, and topological tensors interactively.
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="assets/fluxrender_demo.mp4" type="video/mp4">
-</video>
+
+https://github.com/user-attachments/assets/2322afe3-7c2c-4d5d-92f6-2776c2d2d5f5
+
 
 ---
 
@@ -25,9 +25,10 @@ FluxRender is built around a philosophy of computational efficiency and seamless
 * **Seamless UI Integration:** Turn static simulations into interactive topological dashboards effortlessly. FluxRender provides a streamlined built-in UI system that allows you to instantly attach custom buttons and interaction listeners to your scene.
 
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="assets/fluxrender_modes.mp4" type="video/mp4">
-</video>
+
+https://github.com/user-attachments/assets/ac3eb843-b079-4e6a-8383-43f0ccc9abf3
+
+
 
 ---
 
