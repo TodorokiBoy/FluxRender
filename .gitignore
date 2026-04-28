@@ -12,3 +12,8 @@ site/
 # Pliki testowe i śmieciowe
 *main*.py
 
+# PyPI build artifacts
+build/
+dist/
+*.egg-info/
+
