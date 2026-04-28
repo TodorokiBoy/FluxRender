@@ -1,0 +1,24 @@
+/* docs/stylesheets/extra.css */
+
+.md-grid {
+  max-width: 95%; /* Możesz wpisać np. 1600px, jeśli wolisz stałą szerokość */
+}
+
+
+.doc-function
+{
+  background-color: #151925;
+  border-radius: 10px;
+  padding: 2px 20px;
+  margin-top: 40px;
+}
+
+.doc-function h3
+{
+  margin-top: 10px;
+}
+
+.doc-function-name
+{
+  font-size: 1.4em;
+}

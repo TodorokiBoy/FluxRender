@@ -1,0 +1,66 @@
+site_name: FluxRender
+
+# 1. WŁĄCZENIE KOLOROWANIA SKŁADNI I ZAAWANSOWANEGO MARKDOWNA
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+# 2. KONFIGURACJA GENERATORA API (CZYTELNE METODY I TABELE)
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_root_heading: true
+            show_source: true
+            separate_signature: true           # Wyraźnie oddziela metody!
+            show_signature_annotations: true   # Pokazuje typy zmiennych
+            docstring_section_style: table     # Zamienia 'Args' w piękne tabele
+            merge_init_into_class: true        # Łączy docstring klasy i __init__
+            inherited_members: true            # Pokazuje odziedziczone metody
+            show_if_no_docstring: false        # Ukrywa metody bez docstringa (czyli te, które nie są API)
+
+theme:
+  name: material
+  logo: assets/logo.png      # Główna ikona obok nazwy w lewym górnym rogu
+  favicon: assets/logo.png   # Mała ikona na karcie w przeglądarce
+  # Ustawienie kolorów
+  palette:
+    scheme: slate      # Wymusza ciemny motyw (default to jasny)
+    primary: indigo    # Główny kolor paska i przycisków
+    accent: cyan       # Kolor linków i podświetleń
+
+  # Opcjonalne "bajery" nawigacyjne
+  features:
+    - navigation.tabs         # Dodaje poziome menu na górze strony
+    - navigation.sections     # Pogrubia sekcje w lewym menu
+    - navigation.expand       # Automatycznie rozwija lewe menu
+    - content.code.copy       # Dodaje przycisk "Kopiuj" przy blokach kodu!
+
+
+nav:
+  - Home: index.md
+  - API Reference:
+      - Core & Scene:
+        - CoordinateSystem: coordinate_system.md
+        - Scene: scene.md
+      - Visual Entities:
+        - VectorField: vector_field.md
+        - ParticleSystem: particle_system.md
+      - Math Engine:
+        - Vector Math Engine: math.md
+      - Regions & Probes:
+        - Region: region.md
+        - Probe: probe.md
+      - Styling & Enums:
+        - Style, Colors and UI: style.md
+        - Enums: enums.md
+
+
+extra_css:
+  - stylesheets/extra.css
+
