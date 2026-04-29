@@ -19,7 +19,8 @@ classifiers = [
 ]
 dependencies = [
     "numpy",
-    "taichi"
+    "taichi",
+    "Pillow"
 ]
 
 [project.urls]
