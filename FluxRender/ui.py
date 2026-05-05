@@ -8,7 +8,7 @@ from . import core as cr
 from . import entities as en
 
 from dataclasses import dataclass
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Optional
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import taichi as ti
@@ -21,19 +21,40 @@ import math
 @dataclass
 class UIStyle:
     """
-    This class contains all the common visual properties for widgets (e.g., Button).
+    A highly flexible, CSS-like styling configuration for UI elements.
+
+    Unlike rigid styling properties, UIStyle utilizes a cascading resolution system.
+    By default, all attributes are initialized to `None`. This allows elements to
+    intelligently inherit properties from their parent containers or fall back to
+    their class-specific and global default themes.
+
+    ### The Cascading Resolution Order
+    When a UI element needs to render, it resolves its style properties in this exact order:
+    1. Instance Override: Is it explicitly set in this specific UIStyle instance?
+    2. Parent Inheritance: If the property is inheritable, does the parent container have it set?
+    3. Class Default: What is the natural default for this element type (e.g., Button vs. Container)?
+    4. Global Theme: The ultimate fallback theme defined by the engine.
+
+    ### Inheritable vs. Non-Inheritable Properties
+    - Inheritable Properties: Typography and deep layout states (e.g., `text_color`, `display`).
+      If you set these on a container, all child elements inside will inherit them.
+    - Non-Inheritable Properties: Physical bounds and surface appearances (e.g., `background_color`,
+      `padding`, `visible`). Setting a red background on a container will NOT make its inner buttons red.
 
     Args:
-        background_color: The default background color of the widget in RGBA format (default: (1, 1, 1, 1)).
-        hover_background_color: The background color when the mouse hovers over the widget (default: (0.8, 0.8, 0.8, 1)).
-        active_background_color: The background color when the widget is active (e.g., being clicked) (default: (0.7, 0.7, 0.7, 1)).
-        text_color: The default color of the text in RGBA format (default: (0, 0, 0, 1)).
-        hover_text_color: The color of the text when the mouse hovers over the widget (default: (0, 0, 0, 1)).
-        active_text_color: The color of the text when the widget is active (e.g., being clicked) (default: (0, 0, 0, 1)).
-        text_stroke: The width of the stroke around the text (can be used to make text bold) (default: 0).
-        text_stroke_color: The color of the stroke around the text (default: (0, 0, 0, 1)).
-        border_radius: Corner rounding radius (default: 10).
-        font_size: The size of the font used for the widget's text (default: 35).
+        background_color: The background color of the widget in RGBA format.
+        hover_background_color: The background color when the mouse hovers over the widget.
+        active_background_color: The background color when the widget is active (e.g., clicked).
+        text_color: (Inheritable) The color of the text in RGBA format.
+        hover_text_color: (Inheritable) The color of the text when the mouse hovers.
+        text_stroke: (Inheritable) The width of the stroke around the text.
+        text_stroke_color: (Inheritable) The color of the stroke around the text.
+        active_text_color: (Inheritable) The color of the text when the widget is active.
+        border_radius: Corner rounding radius.
+        font_size: (Inheritable) The size of the font used for the widget's text.
+        padding: Inner spacing (x, y) between the widget's border and its internal content.
+        display: (Inheritable) Toggles rendering for both the element AND all of its children.
+        visible: Toggles rendering for the element's surface only. Children remain drawn.
 
     Example:
         Creating a button with custom styling:
@@ -42,47 +63,76 @@ class UIStyle:
 
         # [Initializing the scene and coordinate system]
 
-        # Define function to handle button click
-        def on_click():
-            print("Button clicked!")
-
-
-        # Create a button with the click function and custom style
-        button = fr.Button(
-            text = "Click Me",
-            on_click = toggle_color,
-            style = fr.UIStyle(
-                background_color = (0.2, 0.2, 0.8, 1),  # Blue background
-                hover_background_color = (0.3, 0.3, 0.9, 1),  # Lighter blue on hover
-                active_background_color = (0.1, 0.1, 0.7, 1),  # Darker blue when clicked
-                text_color = (1, 1, 1, 1),  # White text
-                hover_text_color = (1, 1, 0.6, 1),  # Light yellow text on hover
-                active_text_color = (1, 1, 0.3, 1),  # Yellow text when active
-                text_stroke = 3,
-                border_radius=15,
-                font_size=20,
-            )
+        # Create a container style with a warning aesthetic.
+        # Background is explicitly red, and text is explicitly yellow.
+        warning_panel_style = fr.UIStyle(
+            background_color = (1.0, 0.0, 0.0, 0.5),
+            text_color = (1.0, 1.0, 0.0, 1.0)
         )
 
-        scene.add(button)
+        warning_container = fr.VBox(x_pos=100, y_pos=100, style=warning_panel_style)
+
+        # Define function to handle button click
+        def acknowledge_warning():
+            print("Warning acknowledged!")
+
+
+        # Create a button WITHOUT passing any specific style.
+        # It will use its default button background, but intelligently inherit the yellow text color from the warning container.
+        action_button = fr.Button(
+            text = "Understood",
+            on_click = acknowledge_warning
+        )
+
+        warning_container.add(action_button)
+        scene.add(warning_container)
         ```
     """
 
-    background_color: Sequence[float] = (1, 1, 1, 1)
-    hover_background_color: Sequence[float] = (0.8, 0.8, 0.8, 1)
-    active_background_color: Sequence[float] = (0.7, 0.7, 0.7, 1)
-    text_color: Sequence[float] = (0, 0, 0, 1)
-    hover_text_color: Sequence[float] = text_color
-    text_stroke: int = 0
-    text_stroke_color: Sequence[float] = text_color
-    active_text_color: Sequence[float] = text_color
-    border_radius: int = 10
-    font_size: int = 35
+    background_color: Optional[Sequence[float]] = None
+    hover_background_color: Optional[Sequence[float]] = None
+    active_background_color: Optional[Sequence[float]] = None
+    text_color: Optional[Sequence[float]] = None
+    hover_text_color: Optional[Sequence[float]] = None
+    text_stroke: Optional[int] = None
+    text_stroke_color: Optional[Sequence[float]] = None
+    active_text_color: Optional[Sequence[float]] = None
+    border_radius: Optional[int] = None
+    font_size: Optional[int] = None
+    padding: Optional[Tuple[int, int]] = None
+    display: Optional[bool] = None
+    visible: Optional[bool] = None
+
+GLOBAL_THEME = UIStyle(
+    background_color=(0.125, 0.192, 0.38, 1),
+    hover_background_color=(0.153, 0.278, 0.631, 0.8),
+    active_background_color=(0.125, 0.192, 0.38, 0.6),
+    text_color=(1, 1, 1, 1),
+    hover_text_color=(1, 1, 1, 1),
+    active_text_color=(1, 1, 1, 1),
+    text_stroke=0,
+    text_stroke_color=(0, 0, 0, 1),
+    border_radius=10,
+    font_size=23,
+    display=True,
+    visible=True,
+)
+
+INHERITABLE_UI_PROPERTIES = {
+    "text_color",
+    "hover_text_color",
+    "active_text_color",
+    "font_size",
+    "text_stroke",
+    "text_stroke_color",
+    "display"
+}
 
 class UIWidget(en.Renderable):
     """
     Base class for UI widgets. It defines the basic properties and methods that all widgets should have.
     """
+    DEFAULT_STYLE = UIStyle()
 
     x_pos = NonNegativeInt()
     y_pos = NonNegativeInt()
@@ -96,6 +146,8 @@ class UIWidget(en.Renderable):
         self.height = height
         self.align = align
 
+        self._parent = None
+
         if style is None:
             self.style = UIStyle()
         elif isinstance(style, UIStyle):
@@ -103,6 +155,27 @@ class UIWidget(en.Renderable):
         else:
             _fatal_error(f"style must be an instance of UIStyle class. Got {type(style).__name__}.", "TypeError")
 
+    def get_style(self, property_name: str):
+
+        # 1. Has the user explicitly set this property on this specific instance?
+        instance_specific_value = getattr(self.style, property_name)
+        if instance_specific_value is not None:
+            return instance_specific_value
+
+        # 2. Can we inherit this from the parent container? (Typography, visibility, etc.)
+        if self._parent is not None and property_name in INHERITABLE_UI_PROPERTIES:
+            parent_cascaded_value = self._parent.get_style(property_name)
+            if parent_cascaded_value is not None:
+                return parent_cascaded_value
+
+        # 3. NO INSTANCE STYLE AND NO INHERITANCE.
+        # Fallback to the specific element's natural default style (e.g., Button vs Container)
+        class_default_value = getattr(self.__class__.DEFAULT_STYLE, property_name)
+        if class_default_value is not None:
+            return class_default_value
+
+        # 4. Ultimate fallback (for things like global font definitions)
+        return getattr(GLOBAL_THEME, property_name)
 
     def handle_input(self):
         pass
@@ -131,10 +204,21 @@ class Button(UIWidget):
     - **Alignment**: Supports various anchor points (e.g., Center, Top-Left) for flexible positioning.
     """
 
+    DEFAULT_STYLE = UIStyle(
+        background_color=(0.0, 0.5, 1.0, 0.45),
+        hover_background_color=(0.0, 0.6, 1.0, 0.55),
+        active_background_color=(0.0, 0.4, 0.9, 0.7),
+        border_radius=10,
+    )
+
     text = StrictString()
     on_click = Callable()
     align = EnumValidator(Align)
     is_active = StrictBool()
+    x_pos = NonNegativeInt()
+    y_pos = NonNegativeInt()
+    width = PositiveInt()
+    height = PositiveInt()
 
 
     def __init__(self,
@@ -195,6 +279,8 @@ class Button(UIWidget):
             ```
         """
 
+        self._is_inicialized = False
+        self._is_inicialized_shape = False
 
         super().__init__(x_pos, y_pos, width, height, align, style)
 
@@ -205,12 +291,13 @@ class Button(UIWidget):
 
         self.text = text
         self.on_click = on_click
-        self._bake_text_texture()
 
         self._is_dirty = True
         self._last_applied_bg = None
         self._last_applied_txt = None
         self._was_lmb_down = False
+
+        self.scene = None
 
         # checking the number of parameters
         self._params = _count_function_parameters(on_click)
@@ -218,6 +305,8 @@ class Button(UIWidget):
             _fatal_error(f"on_click function must have 0, 1, or unlimited parameters (*args or **kwargs). Got {self._params}.", "ValueError")
 
         self.is_active = False
+        self._is_inicialized = True
+        self._bake_text_texture()
 
 
 
@@ -252,13 +341,24 @@ class Button(UIWidget):
             self.min_y = self.y_pos
             self.max_y = min(self.y_pos + self.height, scene.height)
         elif self.align == Align.CENTER:
-            self.min_x = max(self.x_pos - self.width / 2, 0)
-            self.max_x = min(self.x_pos + self.width / 2, scene.width)
-            self.min_y = max(self.y_pos - self.height / 2, 0)
-            self.max_y = min(self.y_pos + self.height / 2, scene.height)
+            self.min_x = max(self.x_pos - self.width // 2, 0)
+            self.max_x = min(self.x_pos + self.width // 2, scene.width)
+            self.min_y = max(self.y_pos - self.height // 2, 0)
+            self.max_y = min(self.y_pos + self.height // 2, scene.height)
 
-        self.center_x = self.min_x + self.width / 2.0
-        self.center_y = self.min_y + self.height / 2.0
+        self.center_x = self.min_x + self.width // 2
+        self.center_y = self.min_y + self.height // 2
+
+        self._is_inicialized_shape = True
+
+    def _flag_for_update(self, name):
+            if self._is_inicialized:
+                if self._is_inicialized_shape:
+                    self._init_shape(self.scene)
+
+                if name in ('width', 'height'):
+                    self._bake_text_texture()
+
 
     def _bake_text_texture(self):
         """
@@ -277,10 +377,10 @@ class Button(UIWidget):
 
         # Attempt to load preferred fonts, falling back to default if necessary
         try:
-            font = ImageFont.truetype("DejaVuSans.ttf", self.style.font_size)
+            font = ImageFont.truetype("DejaVuSans.ttf", self.get_style("font_size"))
         except IOError:
             try:
-                font = ImageFont.truetype("arial.ttf", self.style.font_size)
+                font = ImageFont.truetype("arial.ttf", self.get_style("font_size"))
             except IOError:
                 font = ImageFont.load_default()
 
@@ -289,7 +389,7 @@ class Button(UIWidget):
         try:
             ascent, descent = font.getmetrics()
         except AttributeError:
-            ascent, descent = self.style.font_size, 5
+            ascent, descent = self.get_style("font_size"), 5
 
         text_height = ascent + descent
 
@@ -304,7 +404,7 @@ class Button(UIWidget):
             self.text,
             font=font,
             fill=(255, 255, 255, 255),
-            stroke_width = self.style.text_stroke,
+            stroke_width = self.get_style("text_stroke"),
             stroke_fill = (255, 0, 255, 255),
             anchor="ms" # 'm' = middle (horizontal), 's' = baseline (vertical)
         )
@@ -323,7 +423,7 @@ class Button(UIWidget):
         self.text_field.from_numpy(image_np)
 
     @ti.func
-    def _get_color_at(self, x, y):
+    def _get_color_at(self, x, y, text_stroke_color):
         """
         Calculates the final pixel color at (x, y) by blending text, stroke, and background.
 
@@ -348,7 +448,7 @@ class Button(UIWidget):
         # If the Green channel (index 1) is 0, this pixel belongs to the stroke.
         text_color = self._current_text_color[None]
         if text_pixel[1] == 0:
-            text_color = ti.Vector(self.style.text_stroke_color)
+            text_color = text_stroke_color
 
         alpha = text_pixel.w
 
@@ -370,12 +470,14 @@ class Button(UIWidget):
         return tm.length(ti.max(q, 0.0)) + ti.min(ti.max(q.x, q.y), 0.0) - r
 
     def render(self, scene):
+        if not (self.get_style("visible") and self.get_style("display")):
+            return
         if self._is_dirty:
-            self._render_gpu(scene)
+            self._render_gpu(scene, self.get_style("border_radius"), ti.Vector(self.get_style("text_stroke_color")))
             self._is_dirty = False
 
     @ti.kernel
-    def _render_gpu(self, scene: ti.template()): # type: ignore
+    def _render_gpu(self, scene: ti.template(), radius: float, text_stroke_color: ti.template()): # type: ignore
         """
         Renders the button appearance on the GPU
 
@@ -383,7 +485,6 @@ class Button(UIWidget):
             cene (Scene): Scene object
         """
 
-        radius = self.style.border_radius
         # half extents
         b = ti.Vector([self.width / 2, self.height / 2])
 
@@ -397,7 +498,7 @@ class Button(UIWidget):
                 alpha_shape = 1.0 - tm.smoothstep(-0.5, 0.5, dist)
 
                 if alpha_shape > 0.0:
-                    color_content = self._get_color_at(x, y)
+                    color_content = self._get_color_at(x, y, text_stroke_color)
                     existing_color = scene.ui_layer[x, y]
                     final_pixel = color_content * alpha_shape + existing_color * (1.0 - alpha_shape)
 
@@ -422,14 +523,14 @@ class Button(UIWidget):
 
 
         if self.is_active:
-            target_bg = self.style.active_background_color
-            target_txt = self.style.active_text_color
+            target_bg = self.get_style("active_background_color")
+            target_txt = self.get_style("active_text_color")
         elif hovered:
-            target_bg = self.style.hover_background_color
-            target_txt = self.style.hover_text_color
+            target_bg = self.get_style("hover_background_color")
+            target_txt = self.get_style("hover_text_color")
         else:
-            target_bg = self.style.background_color
-            target_txt = self.style.text_color
+            target_bg = self.get_style("background_color")
+            target_txt = self.get_style("text_color")
 
 
         colors_changed = (target_bg != self._last_applied_bg) or \
@@ -460,7 +561,7 @@ class Button(UIWidget):
         return False
 
     def __repr__(self):
-        return f"Button(text='{self.text}', x_pos={self.x_pos}, y_pos={self.y_pos}, width={self.width}, height={self.height}, align={self.align})"
+        return f"<Button (text='{self.text}', x_pos={self.x_pos}, y_pos={self.y_pos}, width={self.width}, height={self.height}, align={self.align})>"
 
 
 
@@ -608,7 +709,7 @@ class Grid(en.Renderable):
         )
 
     def __repr__(self):
-        return f"Grid(color={self.color}, thickness={self.thickness}, density={self.density}, antyaliasing={self.antyaliasing})"
+        return f"<Grid (color={self.color}, thickness={self.thickness}, density={self.density}, antyaliasing={self.antyaliasing})>"
 
 
 
@@ -1131,6 +1232,312 @@ class Axis(en.Renderable):
         if self.draw_arrows: self._render_arrows(scene.scene_layer, cam)
 
 
+    def __repr__(self) -> str:
+        return f"<Axis (color={self.color}, thickness={self.thickness}, label_size={self.font.font_size})>"
+
+
+
+class Container(UIWidget):
+    """A base class for UI containers that can hold and manage multiple elements."""
+
+    DEFAULT_STYLE = UIStyle(
+        background_color=(0.118, 0.145, 0.322, 0.6),
+        padding=(15, 15),
+        border_radius=22,
+    )
+
+
+    def __init__(self,
+                 x_pos: int, y_pos: int,
+                 spacing: int = 15,
+                 align: Align = Align.LEFT_TOP,
+                 common_width: int = None,
+                 common_height: int = None,
+                 style: UIStyle = None
+                 ):
+        self.color_gpu = ti.Vector.field(4, dtype=float, shape=())
+
+        super().__init__(x_pos, y_pos, 1, 1, align, style)
+        self.elements = []
+        self.spacing = spacing
+        self.common_width = common_width
+        self.common_height = common_height
+
+    def add(self, *args):
+        for element in args:
+            setattr(element, '_parent', self)
+            self.elements.append(element)
+
+
+    @ti.kernel
+    def _render_background(self, target_layer: ti.template(), border_radius: ti.i32): # type: ignore
+        color = self.color_gpu[None]
+
+        half_w = float(self.width) / 2.0
+        half_h = float(self.height) / 2.0
+        cx = float(self.x_pos) + half_w
+        cy = float(self.y_pos) - half_h
+
+        r = ti.min(float(border_radius), ti.min(half_w, half_h))
+
+        x_min = self.x_pos
+        x_max = self.x_pos + self.width
+        y_min = self.y_pos - self.height
+        y_max = self.y_pos
+
+        for i, j in ti.ndrange((x_min, x_max + 1), (y_min, y_max + 1)):
+            if 0 <= i < target_layer.shape[0] and 0 <= j < target_layer.shape[1]:
+
+                dx = ti.abs(float(i) - cx)
+                dy = ti.abs(float(j) - cy)
+
+                qx = dx - half_w + r
+                qy = dy - half_h + r
+
+                qx_out = ti.max(qx, 0.0)
+                qy_out = ti.max(qy, 0.0)
+
+                dist_out = ti.sqrt(qx_out * qx_out + qy_out * qy_out)
+                dist_in = ti.min(ti.max(qx, qy), 0.0)
+
+                dist = dist_out + dist_in - r
+
+                # Antyaliasing
+                shape_a = ti.max(0.0, ti.min(1.0, 0.5 - dist))
+
+                if shape_a > 0.0:
+                    existing = target_layer[i, j]
+                    src_a = color.w * shape_a
+                    out_a = src_a + existing.w * (1.0 - src_a)
+                    out_rgb = (color.xyz * src_a + existing.xyz * existing.w * (1.0 - src_a)) / ti.max(out_a, 1e-6)
+                    target_layer[i, j] = ti.Vector([out_rgb.x, out_rgb.y, out_rgb.z, out_a])
+
+    def render(self, scene):
+        if not (self.get_style("visible") and self.get_style("display")):
+            return
+
+        # Draw background
+        if self.get_style("background_color")[3] > 0:
+            self.color_gpu[None] = ti.Vector(self.get_style("background_color"))
+            padding = self.get_style("padding")
+            self._render_background(scene.scene_layer, self.get_style("border_radius"))
+
+    def _init(self, scene):
+        self._update_layout()
+
+
+@ti.data_oriented
+class VBox(Container):
+    """
+    A vertical layout manager that automatically stacks its children from top to bottom.
+
+    The VBox utilizes a deferred layout resolution system. It does not calculate
+    positions immediately upon adding elements. Instead, it waits until the entire
+    UI tree is constructed, and then recursively computes bounding boxes (bottom-up)
+    and element coordinates (top-down). This ensures pixel-perfect alignment regardless
+    of the order in which nested containers and widgets are added.
+    """
+
+    x_pos = NonNegativeInt()
+    y_pos = NonNegativeInt()
+    spacing = NonNegativeInt()
+    align = EnumValidator(Align)
+
+    def __init__(self,
+                 x_pos: int, y_pos: int,
+                 spacing: int = 15,
+                 align: Align = Align.LEFT_TOP,
+                 common_width: int = None,
+                 common_height: int = None,
+                 style: UIStyle = None
+                 ):
+        """
+        Args:
+            x_pos: The starting X coordinate (anchor point) of the container.
+            y_pos: The starting Y coordinate (anchor point) of the container.
+            spacing: The number of pixels inserted vertically between each child element.
+            align: The alignment method that objects in the container will inherit.
+            common_width: Forces a uniform width for all DIRECT children (e.g., Buttons)
+                added to this specific container. Does not affect deeply nested elements.
+            common_height: Forces a uniform height for all DIRECT children added to this
+                specific container. Does not affect deeply nested elements.
+            style: The UIStyle object dictating the container's appearance (e.g., background,
+                padding). Inheritable properties provided here will cascade to all children.
+
+        Example:
+            Creating a vertical set of three buttons:
+            ```python
+            import FluxRender as fr
+
+            # [Inicialize the scene and coordinate system]
+
+            # Define the container for the buttons
+            vertical_container = fr.VBox(30, 400, common_height=40, common_width=290)
+
+            # Create a function called by buttons
+            def print_name(button):
+                print(f"Button pressed: {button.text}")
+
+            # Create buttons
+            button1 = fr.Button("Orange", print_name)
+            button2 = fr.Button("Blue", print_name)
+            button3 = fr.Button("Green", print_name)
+
+            # Add buttons to the container
+            vertical_container.add(button1, button2, button3)
+
+            # Add the container to the scene
+            scene.add(vertical_container)
+            ```
+        """
+
+        super().__init__(x_pos, y_pos, spacing, align, common_width, common_height, style)
+
+        self._current_y = y_pos
+
+
+    def _update_layout(self):
+        """
+        Recursively calculates positions and dimensions for the container and its nested children.
+        Executed once when the root container is added to the scene.
+        """
+
+        current_x = self.x_pos + self.get_style("padding")[0]
+        current_y = self.y_pos - self.get_style("padding")[1]
+        max_width = 0
+
+        for element in self.elements:
+            if self.common_width is not None:
+                setattr(element, 'width', self.common_width)
+            if self.common_height is not None:
+                setattr(element, 'height', self.common_height)
+
+            setattr(element, 'align', self.align)
+
+            setattr(element, 'y_pos', current_y)
+            setattr(element, 'x_pos', current_x)
+
+            # If the element is a container, we need to update its layout before we can get its dimensions
+            if isinstance(element, Container):
+                element._update_layout()
+
+            el_width = getattr(element, 'width', 0)
+            el_height = getattr(element, 'height', 0)
+
+            current_y -= el_height + self.spacing
+            max_width = max(max_width, el_width)
+
+            self.width = max_width + self.get_style("padding")[0] * 2
+            self.height = max(0, self.y_pos - current_y - self.spacing) + self.get_style("padding")[1]
+
+
+    def __repr__(self):
+        return f"<VBox (x_pos={self.x_pos} y_pos={self.y_pos} spacing={self.spacing})>"
+
+@ti.data_oriented
+class HBox(Container):
+    """
+    A horizontal layout manager that automatically arranges its children from left to right.
+
+    The HBox relies on a robust deferred layout architecture. By separating the hierarchy
+    building phase from the mathematical layout phase, it can dynamically adapt its own
+    bounding box to wrap exactly around its content, making it highly scalable for complex,
+    nested UI structures.
+    """
+
+    x_pos = NonNegativeInt()
+    y_pos = NonNegativeInt()
+    spacing = NonNegativeInt()
+    align = EnumValidator(Align)
+
+    def __init__(self,
+                 x_pos: int, y_pos: int,
+                 spacing: int = 15,
+                 align: Align = Align.LEFT_TOP,
+                 common_width: int = None,
+                 common_height: int = None,
+                 style: UIStyle = None
+                 ):
+        """
+        Args:
+            x_pos: The starting X coordinate (anchor point) of the container.
+            y_pos: The starting Y coordinate (anchor point) of the container.
+            spacing: The number of pixels inserted horizontally between each child element.
+            align: The alignment method that objects in the container will inherit.
+            common_width: Forces a uniform width for all DIRECT children (e.g., Buttons)
+                added to this specific container. Does not affect deeply nested elements.
+            common_height: Forces a uniform height for all DIRECT children added to this
+                specific container. Does not affect deeply nested elements.
+            style: The UIStyle object dictating the container's appearance (e.g., background,
+                padding). Inheritable properties provided here will cascade to all children.
+
+        Example:
+            Creating a horizontal set of three buttons:
+            ```python
+            import FluxRender as fr
+
+            # [Inicialize the scene and coordinate system]
+
+            # Define the container for the buttons
+            horizontal_container = fr.HBox(10, 80, common_height=40, common_width=290)
+
+            # Create a function called by buttons
+            def print_name(button):
+                print(f"Button pressed: {button.text}")
+
+            # Create buttons
+            button1 = fr.Button("Orange", print_name)
+            button2 = fr.Button("Blue", print_name)
+            button3 = fr.Button("Green", print_name)
+
+            # Add buttons to the container
+            horizontal_container.add(button1, button2, button3)
+
+            # Add the container to the scene
+            scene.add(horizontal_container)
+            ```
+        """
+
+        super().__init__(x_pos, y_pos, spacing, align, common_width, common_height, style)
+
+        self._current_x = x_pos
+
+    def _update_layout(self):
+        """
+        Recursively calculates positions and dimensions for the container and its nested children.
+        Executed once when the root container is added to the scene.
+        """
+
+        current_x = self.x_pos + self.get_style("padding")[0]
+        current_y = self.y_pos - self.get_style("padding")[1]
+        max_height = 0
+
+        for element in self.elements:
+            if self.common_width is not None:
+                setattr(element, 'width', self.common_width)
+            if self.common_height is not None:
+                setattr(element, 'height', self.common_height)
+
+            setattr(element, 'align', self.align)
+
+            setattr(element, 'y_pos', current_y)
+            setattr(element, 'x_pos', current_x)
+
+            # If the element is a container, we need to update its layout before we can get its dimensions
+            if isinstance(element, Container):
+                element._update_layout()
+
+            el_width = getattr(element, 'width', 0)
+            el_height = getattr(element, 'height', 0)
+
+            current_x += el_width + self.spacing
+            max_height = max(max_height, el_height)
+
+            self.width = max(0, current_x - self.x_pos - self.spacing) + self.get_style("padding")[0]
+            self.height = max_height + self.get_style("padding")[1] * 2
+
+    def __repr__(self):
+        return f"<HBox (x_pos={self.x_pos} y_pos={self.y_pos} spacing={self.spacing})>"
 
 
 

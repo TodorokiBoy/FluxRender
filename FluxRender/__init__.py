@@ -1,5 +1,5 @@
 from .core import Scene, CoordinateSystem
-from .ui import Button, UIStyle, Grid, Axis
+from .ui import Button, UIStyle, Grid, Axis, VBox, HBox
 from .entities import VectorField, ParticleSystem
 from .regions import CircularRegion, CursorRegion
 from .math_engine import VectorMathEngine

@@ -80,12 +80,6 @@ class VectorMathEngine(MathEngine):
         }
 
 
-        # 5. TODO: Internal Caches for Vectorized Evaluations (to optimize repeated calculations during rendering)
-        self._primary_vector_function_vectorized = None
-        self._base_angle_vector_function_vectorized = None
-        self._custom_function_vectorized = None
-
-
     def _validate_all_functions(self):
         """
         Analyzes the signatures of provided functions and sets appropriate time-dependency flags.
@@ -678,6 +672,10 @@ class VectorMathEngine(MathEngine):
             _fatal_error("Custom color function is not set (custom_function). Please provide a valid function to use CUSTOM color property.", error_type="ValueError")
 
         return self._safe_evaluate_scalar_function(self.custom_function, vec_dx, vec_dy, world_x, world_y)
+
+
+    def __repr__(self):
+        return f"<VectorMathEngine(primary_vector_function={self.primary_vector_function.__name__}, base_angle_vector={self.base_angle_vector.__name__ if callable(self.base_angle_vector) else self.base_angle_vector}, custom_function={getattr(self.custom_function, '__name__', None)})>"
 
 
     # region Setters and Getters [setters]

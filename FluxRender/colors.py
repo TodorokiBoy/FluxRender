@@ -304,4 +304,11 @@ class ColorMapper:
 
             return np.column_stack((r, g, b, alpha)).astype(np.float32)
 
+    def __repr__(self) -> str:
+        return (f"<ColorMapper(hue range: {self.min_hue}-{self.max_hue}, saturation range: {self.min_saturation}-{self.max_saturation}, lightness range: {self.min_lightness}-{self.max_lightness})>")
+
+
+
+
+
 

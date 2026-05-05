@@ -7,7 +7,7 @@ from .regions import SpatialRegion
 from . import core as cr
 from . import math_engine as me
 
-from typing import Sequence, Tuple
+from typing import Sequence
 import taichi as ti
 import numpy as np
 import warnings
@@ -1132,6 +1132,10 @@ class VectorField(VectorEntity):
         if self.draw_arrows: self._draw_arrowheads_gpu(scene.scene_layer, self.num_vectors, self.arrow_atlas)
 
 
+    def __repr__(self):
+        return f"<VectorField(vec_function={getattr(self.vec_function, '__name__', self.vec_function.__class__.__name__)}, mode={self.mode.name}, num_vectors={self.num_vectors})>"
+
+
     # region Getters and Setters [setters]
     @property
     def vec_function(self):
@@ -1656,6 +1660,8 @@ class ParticleSystem(VectorEntity):
 
         self._particles_lifetimes_np -= scene.dt
 
+    def __repr__(self):
+        return f"<ParticleSystem(count={self.count}, vec_function={getattr(self.vec_function, '__name__', self.vec_function.__class__.__name__)})>"
 
     # region Getters and Setters [setters]
     @property

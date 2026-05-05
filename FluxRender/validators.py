@@ -13,7 +13,7 @@ def _fatal_error(error_message: str, error_type: str = "TypeError"):
 
     current_frame = inspect.currentframe()
 
-    MathFlow_files = {"entities.py",
+    FluxRender_files = {"entities.py",
                       "core.py",
                       "ui.py",
                       "regions.py",
@@ -29,7 +29,7 @@ def _fatal_error(error_message: str, error_type: str = "TypeError"):
         current_filename = current_frame.f_code.co_filename
 
         # If the filename does not contain our library file, we found the user's script
-        if not any(mathflow_file in current_filename for mathflow_file in MathFlow_files):
+        if not any(mathflow_file in current_filename for mathflow_file in FluxRender_files):
             break
 
         current_frame = current_frame.f_back
@@ -40,11 +40,11 @@ def _fatal_error(error_message: str, error_type: str = "TypeError"):
     if current_frame:
         short_filename = os.path.basename(current_filename)
         line_number = current_frame.f_lineno
-        formatted_error = f"{terminal_color_red}[MathFlow {error_type}] in {short_filename}:{line_number} - {error_message}{terminal_color_reset}"
+        formatted_error = f"{terminal_color_red}[FluxRender {error_type}] in {short_filename}:{line_number} - {error_message}{terminal_color_reset}"
         print(formatted_error, file=sys.stderr)
     else:
         # Fallback in case the frame wasn't found
-        formatted_error = f"{terminal_color_red}[MathFlow {error_type}] - {error_message}{terminal_color_reset}"
+        formatted_error = f"{terminal_color_red}[FluxRender {error_type}] - {error_message}{terminal_color_reset}"
         print(formatted_error, file=sys.stderr)
 
     # Terminate the application cleanly without throwing a Python Traceback
@@ -129,9 +129,9 @@ class NonNegativeNumber:
 
     def __set__(self, obj, value):
         if not isinstance(value, (int, float)):
-            _fatal_error(f"Expected a number for {self.private_name[1:]}, got {type(value).__name__}.", "TypeError")
+            _fatal_error(f"Expected a number for {self.private_name[1:]} in {obj.__class__.__name__}, got {type(value).__name__}.", "TypeError")
         if value < 0:
-            _fatal_error(f"Expected a non-negative number for {self.private_name[1:]}, got {value}.", "ValueError")
+            _fatal_error(f"Expected a non-negative number for {self.private_name[1:]} in {obj.__class__.__name__}, got {value}.", "ValueError")
         setattr(obj, self.private_name, value)
 
         if hasattr(obj, '_flag_for_update'):
@@ -146,9 +146,9 @@ class NonNegativeInt:
 
     def __set__(self, obj, value):
         if not isinstance(value, int):
-            _fatal_error(f"Expected an integer for {self.private_name[1:]}, got {type(value).__name__}.", "TypeError")
+            _fatal_error(f"Expected an integer for {self.private_name[1:]} in {obj.__class__.__name__}, got {type(value).__name__}.", "TypeError")
         if value < 0:
-            _fatal_error(f"Expected a non-negative integer for {self.private_name[1:]}, got {value}.", "ValueError")
+            _fatal_error(f"Expected a non-negative integer for {self.private_name[1:]} in {obj.__class__.__name__}, got {value}.", "ValueError")
         setattr(obj, self.private_name, value)
 
         if hasattr(obj, '_flag_for_update'):
@@ -314,5 +314,56 @@ class StrictString:
 
         if hasattr(obj, '_flag_for_update'):
             obj._flag_for_update(self.private_name[1:])
+
+class IntRange:
+    """Descriptor that ensures an attribute is an integer within a specified range."""
+
+    def __init__(self, min_value: int, max_value: int):
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def __set_name__(self, owner, name):
+        self.private_name = '_' + name
+
+    def __get__(self, obj, objtype=None):
+        return getattr(obj, self.private_name)
+
+    def __set__(self, obj, value):
+        if not isinstance(value, int):
+            _fatal_error(f"Expected an integer for {self.private_name[1:]}, got {type(value).__name__}.", "TypeError")
+        if value < self.min_value or value > self.max_value:
+            _fatal_error(f"Expected an integer between {self.min_value} and {self.max_value} for {self.private_name[1:]}, got {value}.", "ValueError")
+        setattr(obj, self.private_name, value)
+
+        if hasattr(obj, '_flag_for_update'):
+            obj._flag_for_update(self.private_name[1:])
+
+class NumberRange:
+    """Descriptor that ensures an attribute is a number within a specified range."""
+
+    def __init__(self, min_value: float, max_value: float):
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def __set_name__(self, owner, name):
+        self.private_name = '_' + name
+
+    def __get__(self, obj, objtype=None):
+        return getattr(obj, self.private_name)
+
+    def __set__(self, obj, value):
+        if not isinstance(value, (int, float)):
+            _fatal_error(f"Expected a number for {self.private_name[1:]}, got {type(value).__name__}.", "TypeError")
+        if value < self.min_value or value > self.max_value:
+            _fatal_error(f"Expected a number between {self.min_value} and {self.max_value} for {self.private_name[1:]}, got {value}.", "ValueError")
+        setattr(obj, self.private_name, float(value))
+
+        if hasattr(obj, '_flag_for_update'):
+            obj._flag_for_update(self.private_name[1:])
+
+
+
+
+
 
 

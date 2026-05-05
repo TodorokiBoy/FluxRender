@@ -120,3 +120,6 @@ class DataProbe:
     def _init(self, scene):
         pass
 
+    def __repr__(self) -> str:
+        return f"<DataProbe(target_region={self.target_region.__class__.__name__}, measured_property={getattr(self.measured_property, 'name', 'vector field value')})>"
+

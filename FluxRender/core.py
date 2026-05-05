@@ -1,15 +1,15 @@
 import taichi as ti
 import taichi.math as tm
-from typing import Sequence, cast
+from typing import Sequence
 import inspect
 import warnings
 import os
 import atexit
 
-from .colors import ColorSequence, parse_color
-from .validators import EnumValidator, ClipingPercentiles, NonNegativeInt, _count_function_parameters, _fatal_error, PositiveNumber, NonNegativeNumber, PositiveInt, CoordinateSequence, StrictBool, Callable, StrictString
+from .colors import ColorSequence
+from .validators import _fatal_error, PositiveInt, StrictBool, StrictString, NumberRange
 
-
+# region initial settings [blue]
 
 try:
     # Try CUDA
@@ -33,7 +33,7 @@ TERMINAL_COLOR_RESET = '\033[0m'
 
 def _mathflow_warning_formatter(message, category, filename, lineno, line=None):
     """
-    Custom warning formatter for MathFlow.
+    Custom warning formatter for FluxRender.
     Strips the absolute path to just the filename and applies a yellow color tag.
     """
     # Extract just the file name from the absolute path (e.g., 'main.py' from '/home/piotr/.../main.py')
@@ -41,7 +41,7 @@ def _mathflow_warning_formatter(message, category, filename, lineno, line=None):
 
     # Construct the final formatted string
     formatted_warning = (
-        f"{TERMINAL_COLOR_YELLOW}[MathFlow {category.__name__}] "
+        f"{TERMINAL_COLOR_YELLOW}[FluxRender {category.__name__}] "
         f"in {short_filename}:{lineno}{TERMINAL_COLOR_RESET} - {message}\n"
     )
 
@@ -50,6 +50,7 @@ def _mathflow_warning_formatter(message, category, filename, lineno, line=None):
 # Override the default Python warning formatter
 warnings.formatwarning = _mathflow_warning_formatter
 
+# endregion
 
 @ti.dataclass
 class CameraObj:
@@ -164,9 +165,6 @@ class CoordinateSystem:
             ```
             Then, in the above case, the ranges on the X and Y axis will be adjusted accordingly to maintain the aspect ratio.
         """
-
-        self.x_range = x_range
-        self.y_range = y_range
 
         self.width = width
         self.height = height
@@ -322,6 +320,9 @@ class CoordinateSystem:
     def to_cartesian(self, r_math, theta_math):
         pass
 
+    def __repr__(self) -> str:
+        return f"<CoordinateSystem(x_range=({round(self.x_min, 3)}, {round(self.x_max, 3)}), y_range=({round(self.y_min, 3)}, {round(self.y_max, 3)}), width={self.width}, height={self.height})>"
+
     # region Setters and Getters [setters]
     @property
     def x_range(self):
@@ -381,35 +382,61 @@ class Scene:
     a trail layer for fading effects and a final layer for crisp overlays.
     It handles alpha composition, physics updates, and the Taichi GUI window.
 
-    Attributes:
-        width (int): Window and buffer width in pixels.
-        height (int): Window and buffer height in pixels.
-        background_color (Sequence[float]): Scene background color (RGB).
-        dt (float): Physics time step (delta time).
-        objects (list): List of renderable objects added to the scene.
-        coords (CoordinateSystem): Coordinate system
+    ### Advanced Usage: Custom Frame Hook
+    While FluxRender is designed to handle UI and rendering autonomously without
+    requiring manual loop management, advanced users can inject custom logic
+    to be executed every frame.
+
+    If a global or passed function named `update()` is defined, the Scene will
+    detect it and call it exactly once per frame, just before the rendering phase.
+    This is ideal for custom animations, complex state machines, or physical simulations.
     """
 
     name = StrictString()
     background_color = ColorSequence()
+    trail_fade_factor = NumberRange(0.0, 1.0)
 
-    def __init__(self, name: str, coords: CoordinateSystem, background_color: Sequence[float] = (0.101, 0.105, 0.149)):
+    def __init__(self,
+                 name: str,
+                 coords: CoordinateSystem,
+                 background_color: Sequence[float] = (0.101, 0.105, 0.149),
+                 trail_fade_factor: float = 0.95
+                ):
         """
-        Initializes a new Scene instance.
-
         Args:
             name (str): Title of the window.
             coords (CoordinateSystem): Coordinate system
             background_color (Sequence[float]): Background color in RGB format (0.0 - 1.0).
                 Defaults to dark navy.
-        """
+            trail_fade_factor (float): Decay factor for the trail layer (0.0 - 1.0).
+                A value of 0.95 means the trails will fade by 5% each frame. Defaults to 0.95.
 
+        Example:
+            Basic initialization:
+            ```python
+            import FluxRender as fr
+
+            coords = fr.CoordinateSystem((-10, 10), (-10, 10), 1200, 800, keep_aspect_ratio=True)
+
+            scene = fr.Scene(
+                "My Simulation",
+                coords,
+                background_color=(0.208, 0.122, 0.361), # Dark purple background color in RGB format (0.0 - 1.0).
+                trail_fade_factor=0.98 # Trails will fade by 2% each frame, creating a longer-lasting trail effect.
+            )
+
+            # [Define objects and add them to the scene here]
+
+            scene.run()
+            ```
+        """
         self._has_run = False
 
         self.coords = coords
         self.width = coords.width
         self.height = coords.height
         self.background_color = background_color
+        self.trail_fade_factor = trail_fade_factor
         self.name = name
         self.window = ti.ui.Window(name, res=(self.width, self.height), vsync=False)
         self.canvas = self.window.get_canvas()
@@ -468,7 +495,7 @@ class Scene:
 
         while window.running:
             # if self._use_trails:
-            self._fade_trails()
+            self._fade_trails(self.trail_fade_factor)
 
             self.scene_layer.fill(0) # Completely clear scene_layer
 
@@ -541,7 +568,7 @@ class Scene:
 
 
     @ti.kernel
-    def _fade_trails(self):
+    def _fade_trails(self, fade_factor: float):
         """
         Applies a fading effect to the trail layer.
 
@@ -550,7 +577,7 @@ class Scene:
         """
 
         for I in ti.grouped(self.trail_layer):
-            self.trail_layer[I].w *= 0.95
+            self.trail_layer[I].w *= fade_factor
 
     def add(self, *args):
         """
@@ -569,26 +596,44 @@ class Scene:
             For example, if you added an Axis first and then a VectorField, the vector field will partially cover the coordinate axes.
         """
 
-        from . import ui
-
         for new_object in args:
-            if hasattr(new_object, 'render') and hasattr(new_object, 'update'):
-                if hasattr(new_object, 'coords'):
-                    if new_object.coords is None:
-                        new_object.coords = self.coords
-                if hasattr(new_object, 'scene'):
-                    if new_object.scene is None:
-                        new_object.scene = self
+            self._process_addition(new_object)
+            if hasattr(new_object, '_init'):
+                new_object._init(self)
 
-                if isinstance(new_object, ui.UIWidget):
-                    new_object._init_shape(self)
+    def _process_addition(self, entity):
+        """
+        Recursively unwraps containers or delegates to the registration method.
+        """
+        import FluxRender.ui as ui
 
-                if hasattr(new_object, '_init'):
-                    new_object._init(self)
+        if isinstance(entity, ui.Container):
+            self.objects.append(entity)
+            for element in entity.elements:
+                self._process_addition(element)
+        else:
+            self._register_single_object(entity)
 
-                self.objects.append(new_object)
-            else:
-                raise _fatal_error("Object must implement render(scene) and update(scene) methods to be added to the scene.", error_type="TypeError")
+    def _register_single_object(self, new_object):
+        """
+        Internal handler for injecting dependencies and appending a single object to the render loop.
+        """
+        import FluxRender.ui as ui
+
+        if not (hasattr(new_object, 'render') and hasattr(new_object, 'update')):
+            _fatal_error("Object must implement render(scene) and update(scene) methods to be added to the scene.", error_type="TypeError")
+
+        if hasattr(new_object, 'coords') and new_object.coords is None:
+            new_object.coords = self.coords
+
+        if hasattr(new_object, 'scene') and new_object.scene is None:
+            new_object.scene = self
+
+        if isinstance(new_object, ui.UIWidget):
+            new_object._init_shape(self)
+
+        self.objects.append(new_object)
+
 
     def _warn_if_not_run(self):
         """
@@ -601,6 +646,10 @@ class Scene:
                 UserWarning,
                 stacklevel=2
             )
+
+
+    def __repr__(self) -> str:
+        return f"<Scene (Name: '{self.name}', Number of Objects: {len(self.objects)})>"
 
     # region Getters and Setters [getters]
     @property

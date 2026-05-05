@@ -1,8 +1,8 @@
 import taichi as ti
 import numpy as np
 
-from .colors import parse_color, ColorSequence
-from .validators import _fatal_error, PositiveNumber, CoordinateSequence, StrictBool
+from .colors import ColorSequence
+from .validators import PositiveNumber, CoordinateSequence, StrictBool
 
 from . import core as cr
 from typing import Sequence, Tuple
@@ -213,10 +213,10 @@ class CircularRegion(SpatialRegion):
         Adapts dynamically to unequal coordinate system scaling (aspect ratio).
         """
 
-        min_x = int(center_x - radius_x)
-        max_x = int(center_x + radius_x)
-        min_y = int(center_y - radius_y)
-        max_y = int(center_y + radius_y)
+        min_x = max(int(center_x - radius_x), 0)
+        max_x = min(int(center_x + radius_x), screen_width-1)
+        min_y = max(int(center_y - radius_y), 0)
+        max_y = min(int(center_y + radius_y), screen_height-1)
 
         # Precompute inverse squares for performance (multiplication is faster than division on GPU)
         inv_radius_x_sq = 1.0 / max(radius_x * radius_x, 1e-10)
@@ -230,7 +230,6 @@ class CircularRegion(SpatialRegion):
 
                     # Mathematical equation for a filled ellipse
                     if (dx * dx) * inv_radius_x_sq + (dy * dy) * inv_radius_y_sq <= 1.0:
-
                         existing_color = target[x, y]
                         final_alpha = color.w + existing_color.w * (1.0 - color.w)
 
@@ -489,6 +488,8 @@ class CursorRegion(SpatialRegion):
             self._render_gpu(scene.scene_layer, scene.width, scene.height, mouse_pos_x, mouse_pos_y, color)
 
 
+    def __repr__(self) -> str:
+        return f"<CursorRegion (Radius: {self.radius}, Always Active: {self.always_active}, Visible: {self.visible})>"
 
 
 
