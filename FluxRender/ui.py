@@ -1,7 +1,7 @@
-from .constants import Align, ArrowStyle
+from .constants import Align, ArrowStyle, FieldMode, Property, ScaleType
 from .graphics import ArrowAtlas, draw_rotated_image
 from .validators import EnumValidator, NonNegativeInt, _count_function_parameters, _fatal_error, PositiveNumber, PositiveInt, CoordinateSequence, StrictBool, Callable, StrictString
-from .colors import ColorSequence, parse_color
+from .colors import ColorSequence
 
 
 from . import core as cr
@@ -309,6 +309,15 @@ class Button(UIWidget):
         self._bake_text_texture()
 
 
+    def change_text(self, new_text: str) -> None:
+        """
+        Changes the button's text and updates the texture.
+
+        Args:
+            new_text (str): The new text to display on the button.
+        """
+        self.text = new_text
+        self._bake_text_texture()
 
     def _init_shape(self, scene):
         """
@@ -1241,7 +1250,8 @@ class Container(UIWidget):
     """A base class for UI containers that can hold and manage multiple elements."""
 
     DEFAULT_STYLE = UIStyle(
-        background_color=(0.118, 0.145, 0.322, 0.6),
+        background_color=(1, 1, 1, 1),
+        # background_color=(0.118, 0.145, 0.322, 0.6),
         padding=(15, 15),
         border_radius=22,
     )
@@ -1262,6 +1272,8 @@ class Container(UIWidget):
         self.spacing = spacing
         self.common_width = common_width
         self.common_height = common_height
+
+        self._is_dirty = True
 
     def add(self, *args):
         for element in args:
@@ -1313,18 +1325,22 @@ class Container(UIWidget):
                     target_layer[i, j] = ti.Vector([out_rgb.x, out_rgb.y, out_rgb.z, out_a])
 
     def render(self, scene):
-        if not (self.get_style("visible") and self.get_style("display")):
+        if not self.get_style("display"):
             return
 
         # Draw background
-        if self.get_style("background_color")[3] > 0:
-            self.color_gpu[None] = ti.Vector(self.get_style("background_color"))
-            padding = self.get_style("padding")
-            self._render_background(scene.scene_layer, self.get_style("border_radius"))
+        if self.get_style("visible") and self._is_dirty:
+            if self.get_style("background_color")[3] > 0:
+                self.color_gpu[None] = ti.Vector(self.get_style("background_color"))
+                self._render_background(scene.ui_layer, self.get_style("border_radius"))
+                self._is_dirty = False
+
+        for element in self.elements:
+            element.update(scene)
+            element.render(scene)
 
     def _init(self, scene):
         self._update_layout()
-
 
 @ti.data_oriented
 class VBox(Container):
@@ -1540,6 +1556,301 @@ class HBox(Container):
         return f"<HBox (x_pos={self.x_pos} y_pos={self.y_pos} spacing={self.spacing})>"
 
 
+
+def create_mode_switch(scene: cr.Scene, vector_field: en.VectorField, add_to_scene: bool = True) -> Button:
+    """
+    Creates an interactive UI button that cycles through the available rendering modes
+    of a vector field.
+
+    This factory function generates a state-machine toggle switch. Each click smoothly
+    advances the target VectorField to its next sequential `FieldMode` (e.g., from
+    WORLD_FIXED to SCREEN_FIXED) and automatically updates the button's text label
+    to reflect the current state. When the final mode is reached, the switch loops
+    seamlessly back to the first available mode.
+
+    Args:
+        scene (cr.Scene): The main scene object where the button will be registered
+            and rendered.
+        vector_field (en.VectorField): The target vector field whose rendering mode
+            will be controlled by this button.
+        add_to_scene (bool): If True, the constructed button will be automatically added to the scene.
+
+    Returns:
+        Button: The constructed UI button widget, fully bound to the scene and
+            ready for interaction.
+
+    Example:
+        ```python
+        import FluxRender as fr
+        import numpy as np
+
+        scene = fr.create_workspace()
+
+        def swirling_vortex(x, y):
+            vector_dx = np.sin(y) * x
+            vector_dy = np.cos(x) * y
+            return vector_dx, vector_dy
+
+        vector_field = fr.VectorField(swirling_vortex)
+
+        fr.create_mode_switch(scene, vector_field)
+
+        scene.add(vector_field)
+        scene.run()
+        ```
+    """
+
+    def toggle_mode(button):
+        mode_iter = iter(mode_mapping.keys())
+        for mode in mode_iter:
+            if mode == vector_field.mode:
+                break
+        try:
+            next_mode = next(mode_iter)
+        except StopIteration:
+            next_mode = next(iter(mode_mapping.keys()))  # Loop back to the first mode
+
+        vector_field.change_mode(next_mode)
+        button.change_text(mode_mapping.get(vector_field.mode, "Unknown Mode"))
+
+    mode_mapping = {
+        FieldMode.WORLD_FIXED: "World Fixed",
+        FieldMode.SCREEN_FIXED: "Screen Fixed",
+        FieldMode.ZOOM_ADAPTIVE: "Zoom Adaptive",
+        FieldMode.WORLD_DENSITY_ADAPTIVE: "World Density Adaptive",
+        FieldMode.ZOOM_DENSITY_ADAPTIVE: "Zoom Density Adaptive"
+    }
+
+    btn = Button(
+        text=mode_mapping.get(vector_field.mode, "Unknown Mode"),
+        on_click=toggle_mode,
+        x_pos=10, y_pos=scene.height - 10,
+        width=230,
+        height=35,
+        style=UIStyle(
+            font_size=16,
+        )
+    )
+
+    if add_to_scene:
+        scene.add(btn)
+    return btn
+
+def create_property_switch(scene: cr.Scene, *target_entities, add_to_scene: bool = True) -> VBox:
+    """
+    Creates a vertical UI panel containing a set of buttons to toggle the active rendering property
+    for multiple vector fields or particle systems.
+
+    This function generates a data-driven switch menu. When a button is clicked, it updates the
+    'color_property' attribute of all provided target entities and visually highlights the currently
+    active button while resetting the others.
+
+    Smart Custom Button Injection:
+    The menu dynamically evaluates the capabilities of the provided entities before construction.
+    The button for `Property.CUSTOM` is strictly injected into the UI only if ALL provided
+    `target_entities` safely support it. This means every entity must either explicitly have a valid
+    `custom_color_function` defined, or its underlying `VectorMathEngine` must possess a valid
+    `custom_function`. This robust check completely eliminates the risk of runtime crashes caused
+    by unsupported custom property switches.
+
+    Args:
+        scene (cr.Scene): The main scene object where the UI container will be registered.
+        *target_entities: An arbitrary number of objects (e.g., VectorField, ParticleSystem)
+            that possess a 'color_property' attribute to be updated.
+        add_to_scene (bool): If True, the constructed VBox will be automatically added to the scene.
+
+    Returns:
+        VBox: The constructed vertical container holding the property buttons, fully bound to the scene.
+
+    Example:
+        ```python
+        import FluxRender as fr
+        import numpy as np
+
+        scene = fr.create_workspace()
+
+        def swirling_vortex(x, y):
+            vector_dx = np.sin(y) * x
+            vector_dy = np.cos(x) * y
+            return vector_dx, vector_dy
+
+        vector_field = fr.VectorField(swirling_vortex)
+        particles = fr.ParticleSystem(swirling_vortex)
+
+        fr.create_property_switch(scene, vector_field, particles)
+
+        scene.add(vector_field, particles)
+        scene.run()
+        ```
+    """
+
+        # Data-driven mapping: (Button Label, Target Enum Property)
+    property_mapping = [
+        ("Component X", Property.COMPONENT_X),
+        ("Component Y", Property.COMPONENT_Y),
+        ("Velocity", Property.VELOCITY),
+        ("Angle", Property.ANGLE),
+        ("Divergence", Property.DIVERGENCE),
+        ("Curl", Property.CURL),
+        ("Jacobian", Property.JACOBIAN),
+        ("Okubo-Weiss", Property.OKUBO_WEISS),
+        ("Convective Acceleration", Property.CONVECTIVE_ACCELERATION),
+    ]
+
+    is_custom_property_available = True
+    for entity in target_entities:
+        if (not hasattr(entity, 'math_engine') or getattr(entity.math_engine, 'custom_function', None) is None) and \
+           (not hasattr(entity, 'custom_color_function') or getattr(entity, 'custom_color_function', None) is None):
+            is_custom_property_available = False
+            break
+
+    if is_custom_property_available:
+        property_mapping.append(("Custom", Property.CUSTOM))
+
+    # region Define styles for active and inactive states [blue]
+    active_style = UIStyle(
+        background_color=(0.027, 0.212, 0.439, 0.878),
+        hover_background_color=(0.027, 0.212, 0.439, 0.878)
+    )
+    inactive_style = UIStyle(
+        background_color=(0.0, 0.5, 1.0, 0.45),
+        hover_background_color=(0.0, 0.6, 1.0, 0.55),
+    )
+    active_custom_style=UIStyle(
+            background_color=(0.431, 0.031, 0.431, 0.878),
+            hover_background_color=(0.431, 0.031, 0.431, 0.878),
+            active_background_color=(0.8, 0.2, 0.8, 0.55)
+    )
+    inactive_custom_style=UIStyle(
+            background_color=(0.8, 0.2, 0.8, 0.45),
+            hover_background_color=(0.8, 0.2, 0.8, 0.55),
+            active_background_color=(0.431, 0.031, 0.431, 0.878)
+    )
+    #endregion
+
+
+    # Internal callback for handling state changes
+    def toggle_property(clicked_button):
+        for entity in target_entities:
+            setattr(entity, 'color_property', clicked_button.property)
+
+        for current_button in generated_buttons:
+            is_custom_property = (current_button.property == Property.CUSTOM)
+
+            if current_button == clicked_button:
+                current_button.style = active_custom_style if is_custom_property else active_style
+            else:
+                current_button.style = inactive_custom_style if is_custom_property else inactive_style
+
+    generated_buttons = []
+
+    # Dynamically generate buttons based on the mapping above
+    for label_text, target_property in property_mapping:
+        is_custom_property = (target_property == Property.CUSTOM)
+        is_active = all(getattr(entity, 'color_property', None) == target_property for entity in target_entities)
+
+        initial_style = inactive_style
+        if is_active:
+            initial_style = active_custom_style if is_custom_property else active_style
+
+        new_button = Button(label_text, toggle_property, style=initial_style)
+        new_button.property = target_property
+        generated_buttons.append(new_button)
+
+    container = VBox(
+        x_pos=10, y_pos=scene.height - 10,
+        spacing=12,
+        common_width=230,
+        common_height=35,
+        style=UIStyle(
+            font_size=16,
+            padding=(12, 12),
+        )
+    )
+
+    container.add(*generated_buttons)
+    if add_to_scene:
+        scene.add(container)
+
+    return container
+
+def create_color_scale_switch(scene: cr.Scene, mapper: en.ColorMapper, add_to_scene: bool = True) -> Button:
+    """
+    Creates an interactive UI button that cycles through the available color scaling types.
+
+    This switch is state-aware. It dynamically builds its cycle path based on the target
+    ColorMapper's capabilities. If the user has not defined a custom scaling function,
+    the switch safely skips the CUSTOM state to prevent runtime errors, cycling only
+    through standard mathematical scales.
+
+    Args:
+        scene (cr.Scene): The main scene object where the button will be registered.
+        mapper (en.ColorMapper): The target color mapper whose scale type will be controlled.
+        add_to_scene (bool): If True, the constructed Button will be automatically added to the scene.
+
+    Returns:
+        Button: The constructed UI button widget.
+
+    Example:
+        ```python
+        import FluxRender as fr
+        import numpy as np
+
+        scene = fr.create_workspace()
+
+        def swirling_vortex(x, y):
+            vector_dx = np.sin(y) * x
+            vector_dy = np.cos(x) * y
+            return vector_dx, vector_dy
+
+        color_mapper = fr.ColorMapper()
+        vector_field = fr.VectorField(swirling_vortex, color_mapper=color_mapper)
+
+        fr.create_color_scale_switch(scene, color_mapper)
+
+        scene.add(vector_field)
+        scene.run()
+        ```
+    """
+
+    scale_mapping = {
+        ScaleType.LINEAR: "Linear",
+        ScaleType.LOGARITHMIC: "Logarithmic",
+        ScaleType.EXPONENTIAL: "Exponential"
+    }
+
+    # SAFETY CHECK: Only inject the CUSTOM mode into the cycle if it's safe to use!
+    if hasattr(mapper, 'scale_function') and mapper.scale_function is not None:
+        scale_mapping[ScaleType.CUSTOM] = "Custom"
+
+    def toggle_scale(button):
+        scale_iter = iter(scale_mapping.keys())
+        for scale in scale_iter:
+            if scale == mapper.scale_type:
+                break
+        try:
+            next_scale = next(scale_iter)
+        except StopIteration:
+            next_scale = next(iter(scale_mapping.keys()))  # Loop back to the first scale
+
+        mapper.scale_type = next_scale
+        button.change_text(scale_mapping.get(mapper.scale_type, "Unknown Scale"))
+        scene._update_all_objects()
+
+    initial_text = scale_mapping.get(mapper.scale_type, "Unknown Scale")
+
+    btn = Button(
+        text=initial_text,
+        on_click=toggle_scale,
+        x_pos=10, y_pos=scene.height - 10, # Offset above the previous switch
+        width=230,
+        height=35,
+        style=UIStyle(font_size=16)
+    )
+
+    if add_to_scene:
+        scene.add(btn)
+    return btn
 
 
 

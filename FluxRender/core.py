@@ -400,7 +400,7 @@ class Scene:
                  name: str,
                  coords: CoordinateSystem,
                  background_color: Sequence[float] = (0.101, 0.105, 0.149),
-                 trail_fade_factor: float = 0.95
+                 trail_fade_factor: float = 0.97
                 ):
         """
         Args:
@@ -409,7 +409,7 @@ class Scene:
             background_color (Sequence[float]): Background color in RGB format (0.0 - 1.0).
                 Defaults to dark navy.
             trail_fade_factor (float): Decay factor for the trail layer (0.0 - 1.0).
-                A value of 0.95 means the trails will fade by 5% each frame. Defaults to 0.95.
+                A value of 0.97 means the trails will fade by 3% each frame. Defaults to 0.97.
 
         Example:
             Basic initialization:
@@ -540,6 +540,7 @@ class Scene:
             canvas.set_image(self.pixels)
             window.show()
 
+
     @ti.kernel
     def _compose_layers(self):
         """
@@ -597,6 +598,7 @@ class Scene:
         """
 
         for new_object in args:
+            self.objects.append(new_object)
             self._process_addition(new_object)
             if hasattr(new_object, '_init'):
                 new_object._init(self)
@@ -608,7 +610,6 @@ class Scene:
         import FluxRender.ui as ui
 
         if isinstance(entity, ui.Container):
-            self.objects.append(entity)
             for element in entity.elements:
                 self._process_addition(element)
         else:
@@ -616,7 +617,7 @@ class Scene:
 
     def _register_single_object(self, new_object):
         """
-        Internal handler for injecting dependencies and appending a single object to the render loop.
+        Internal dependency injection and element initialization handler.
         """
         import FluxRender.ui as ui
 
@@ -632,8 +633,6 @@ class Scene:
         if isinstance(new_object, ui.UIWidget):
             new_object._init_shape(self)
 
-        self.objects.append(new_object)
-
 
     def _warn_if_not_run(self):
         """
@@ -647,6 +646,11 @@ class Scene:
                 stacklevel=2
             )
 
+
+    def _update_all_objects(self):
+        for obj in self.objects:
+            if hasattr(obj, "update_configuration"):
+                obj.update_configuration()
 
     def __repr__(self) -> str:
         return f"<Scene (Name: '{self.name}', Number of Objects: {len(self.objects)})>"

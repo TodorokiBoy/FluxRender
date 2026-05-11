@@ -59,6 +59,7 @@ nav:
       - Styling & Enums:
         - Style, Colors and UI: style.md
         - Enums: enums.md
+      - Shortcuts: shortcuts.md
 
 
 extra_css:

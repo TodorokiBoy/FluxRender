@@ -1251,9 +1251,9 @@ class ParticleSystem(VectorEntity):
     def __init__(
                 self, vec_function,
                 color_mapper: ColorMapper = ColorMapper(),
-                count: int = 10000,
+                count: int = 20000,
                 lifetime: float = 3.0,
-                radius: float = 2,
+                radius: float = 1,
                 color_property: Property = Property.VELOCITY,
                 opacity_function = None, # function of time: [0, 1] -> [0, 1]
                 speed: float = 1.0,
@@ -1284,10 +1284,10 @@ class ParticleSystem(VectorEntity):
                 made to your original engine instance will NOT be reflected in this visual entity.
             color_mapper (ColorMapper): The palette used to paint the particles based on their physical properties. (Default: ColorMapper())
             count (int): How many particles to simulate at once. Higher numbers look denser but require
-                more GPU power. (Default: 10000)
+                more GPU power. (Default: 20000)
             lifetime (float): How many seconds a particle lives before it fades out and respawns
                 at a new location. Keeps the screen from getting too chaotic. (Default: 3.0)
-            radius (float): The visual size (thickness) of each particle dot in pixels. (Default: 2.0)
+            radius (float): The visual size (thickness) of each particle dot in pixels. (Default: 1.0)
             color_property (Property): What mathematical aspect decides the particle's color
                 (e.g., VELOCITY for speed, CURL for rotation, ANGLE for direction). (Default: Property.VELOCITY)
             opacity_function (Callable, optional): A custom fade-in/fade-out curve. A function that takes
