@@ -986,6 +986,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shortcuts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shortcuts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1106,7 +1134,7 @@
 
 
 </h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ParticleSystem</span><span class="p">(</span><span class="n">vec_function</span><span class="p">,</span> <span class="n">color_mapper</span><span class="p">:</span> <span class="n">ColorMapper</span> <span class="o">=</span> <span class="n">ColorMapper</span><span class="p">(),</span> <span class="n">count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span> <span class="n">lifetime</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">,</span> <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">color_property</span><span class="p">:</span> <span class="n">Property</span> <span class="o">=</span> <span class="n">Property</span><span class="o">.</span><span class="n">VELOCITY</span><span class="p">,</span> <span class="n">opacity_function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">normalize_speed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">speed_scale</span><span class="p">:</span> <span class="n">ScaleType</span> <span class="o">=</span> <span class="n">ScaleType</span><span class="o">.</span><span class="n">LINEAR</span><span class="p">,</span> <span class="n">max_speed_percentile</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">95.0</span><span class="p">,</span> <span class="n">emitter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">color_clipping_percentiles</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">95.0</span><span class="p">),</span> <span class="n">scale_function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">base_angle_vector</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">custom_color_function</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ParticleSystem</span><span class="p">(</span><span class="n">vec_function</span><span class="p">,</span> <span class="n">color_mapper</span><span class="p">:</span> <span class="n">ColorMapper</span> <span class="o">=</span> <span class="n">ColorMapper</span><span class="p">(),</span> <span class="n">count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20000</span><span class="p">,</span> <span class="n">lifetime</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">,</span> <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">color_property</span><span class="p">:</span> <span class="n">Property</span> <span class="o">=</span> <span class="n">Property</span><span class="o">.</span><span class="n">VELOCITY</span><span class="p">,</span> <span class="n">opacity_function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">normalize_speed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">speed_scale</span><span class="p">:</span> <span class="n">ScaleType</span> <span class="o">=</span> <span class="n">ScaleType</span><span class="o">.</span><span class="n">LINEAR</span><span class="p">,</span> <span class="n">max_speed_percentile</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">95.0</span><span class="p">,</span> <span class="n">emitter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">color_clipping_percentiles</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">95.0</span><span class="p">),</span> <span class="n">scale_function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">base_angle_vector</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">custom_color_function</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -1182,11 +1210,11 @@ made to your original engine instance will NOT be reflected in this visual entit
             <td>
               <div class="doc-md-description">
                 <p>How many particles to simulate at once. Higher numbers look denser but require
-more GPU power. (Default: 10000)</p>
+more GPU power. (Default: 20000)</p>
               </div>
             </td>
             <td>
-                  <code>10000</code>
+                  <code>20000</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1215,11 +1243,11 @@ at a new location. Keeps the screen from getting too chaotic. (Default: 3.0)</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The visual size (thickness) of each particle dot in pixels. (Default: 2.0)</p>
+                <p>The visual size (thickness) of each particle dot in pixels. (Default: 1.0)</p>
               </div>
             </td>
             <td>
-                  <code>2</code>
+                  <code>1</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1625,9 +1653,9 @@ directly into your color function.</p>
 <span class="normal"><a href="#__codelineno-0-1402">1402</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1251" name="__codelineno-0-1251"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
 <a id="__codelineno-0-1252" name="__codelineno-0-1252"></a>            <span class="bp">self</span><span class="p">,</span> <span class="n">vec_function</span><span class="p">,</span>
 <a id="__codelineno-0-1253" name="__codelineno-0-1253"></a>            <span class="n">color_mapper</span><span class="p">:</span> <span class="n">ColorMapper</span> <span class="o">=</span> <span class="n">ColorMapper</span><span class="p">(),</span>
-<a id="__codelineno-0-1254" name="__codelineno-0-1254"></a>            <span class="n">count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span>
+<a id="__codelineno-0-1254" name="__codelineno-0-1254"></a>            <span class="n">count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20000</span><span class="p">,</span>
 <a id="__codelineno-0-1255" name="__codelineno-0-1255"></a>            <span class="n">lifetime</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">,</span>
-<a id="__codelineno-0-1256" name="__codelineno-0-1256"></a>            <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-0-1256" name="__codelineno-0-1256"></a>            <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
 <a id="__codelineno-0-1257" name="__codelineno-0-1257"></a>            <span class="n">color_property</span><span class="p">:</span> <span class="n">Property</span> <span class="o">=</span> <span class="n">Property</span><span class="o">.</span><span class="n">VELOCITY</span><span class="p">,</span>
 <a id="__codelineno-0-1258" name="__codelineno-0-1258"></a>            <span class="n">opacity_function</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># function of time: [0, 1] -&gt; [0, 1]</span>
 <a id="__codelineno-0-1259" name="__codelineno-0-1259"></a>            <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
@@ -1658,10 +1686,10 @@ directly into your color function.</p>
 <a id="__codelineno-0-1284" name="__codelineno-0-1284"></a><span class="sd">            made to your original engine instance will NOT be reflected in this visual entity.</span>
 <a id="__codelineno-0-1285" name="__codelineno-0-1285"></a><span class="sd">        color_mapper (ColorMapper): The palette used to paint the particles based on their physical properties. (Default: ColorMapper())</span>
 <a id="__codelineno-0-1286" name="__codelineno-0-1286"></a><span class="sd">        count (int): How many particles to simulate at once. Higher numbers look denser but require</span>
-<a id="__codelineno-0-1287" name="__codelineno-0-1287"></a><span class="sd">            more GPU power. (Default: 10000)</span>
+<a id="__codelineno-0-1287" name="__codelineno-0-1287"></a><span class="sd">            more GPU power. (Default: 20000)</span>
 <a id="__codelineno-0-1288" name="__codelineno-0-1288"></a><span class="sd">        lifetime (float): How many seconds a particle lives before it fades out and respawns</span>
 <a id="__codelineno-0-1289" name="__codelineno-0-1289"></a><span class="sd">            at a new location. Keeps the screen from getting too chaotic. (Default: 3.0)</span>
-<a id="__codelineno-0-1290" name="__codelineno-0-1290"></a><span class="sd">        radius (float): The visual size (thickness) of each particle dot in pixels. (Default: 2.0)</span>
+<a id="__codelineno-0-1290" name="__codelineno-0-1290"></a><span class="sd">        radius (float): The visual size (thickness) of each particle dot in pixels. (Default: 1.0)</span>
 <a id="__codelineno-0-1291" name="__codelineno-0-1291"></a><span class="sd">        color_property (Property): What mathematical aspect decides the particle&#39;s color</span>
 <a id="__codelineno-0-1292" name="__codelineno-0-1292"></a><span class="sd">            (e.g., VELOCITY for speed, CURL for rotation, ANGLE for direction). (Default: Property.VELOCITY)</span>
 <a id="__codelineno-0-1293" name="__codelineno-0-1293"></a><span class="sd">        opacity_function (Callable, optional): A custom fade-in/fade-out curve. A function that takes</span>

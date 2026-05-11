@@ -975,6 +975,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shortcuts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shortcuts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1084,7 +1112,7 @@
 
 
 </h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">Scene</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">coords</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">,</span> <span class="n">background_color</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.101</span><span class="p">,</span> <span class="mf">0.105</span><span class="p">,</span> <span class="mf">0.149</span><span class="p">),</span> <span class="n">trail_fade_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">Scene</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">coords</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">,</span> <span class="n">background_color</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.101</span><span class="p">,</span> <span class="mf">0.105</span><span class="p">,</span> <span class="mf">0.149</span><span class="p">),</span> <span class="n">trail_fade_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.97</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -1175,11 +1203,11 @@ Defaults to dark navy.</p>
             <td>
               <div class="doc-md-description">
                 <p>Decay factor for the trail layer (0.0 - 1.0).
-A value of 0.95 means the trails will fade by 5% each frame. Defaults to 0.95.</p>
+A value of 0.97 means the trails will fade by 3% each frame. Defaults to 0.97.</p>
               </div>
             </td>
             <td>
-                  <code>0.95</code>
+                  <code>0.97</code>
             </td>
           </tr>
       </tbody>
@@ -1278,7 +1306,7 @@ A value of 0.95 means the trails will fade by 5% each frame. Defaults to 0.95.</
 <a id="__codelineno-0-400" name="__codelineno-0-400"></a>             <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <a id="__codelineno-0-401" name="__codelineno-0-401"></a>             <span class="n">coords</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">,</span>
 <a id="__codelineno-0-402" name="__codelineno-0-402"></a>             <span class="n">background_color</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.101</span><span class="p">,</span> <span class="mf">0.105</span><span class="p">,</span> <span class="mf">0.149</span><span class="p">),</span>
-<a id="__codelineno-0-403" name="__codelineno-0-403"></a>             <span class="n">trail_fade_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.95</span>
+<a id="__codelineno-0-403" name="__codelineno-0-403"></a>             <span class="n">trail_fade_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.97</span>
 <a id="__codelineno-0-404" name="__codelineno-0-404"></a>            <span class="p">):</span>
 <a id="__codelineno-0-405" name="__codelineno-0-405"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <a id="__codelineno-0-406" name="__codelineno-0-406"></a><span class="sd">    Args:</span>
@@ -1287,7 +1315,7 @@ A value of 0.95 means the trails will fade by 5% each frame. Defaults to 0.95.</
 <a id="__codelineno-0-409" name="__codelineno-0-409"></a><span class="sd">        background_color (Sequence[float]): Background color in RGB format (0.0 - 1.0).</span>
 <a id="__codelineno-0-410" name="__codelineno-0-410"></a><span class="sd">            Defaults to dark navy.</span>
 <a id="__codelineno-0-411" name="__codelineno-0-411"></a><span class="sd">        trail_fade_factor (float): Decay factor for the trail layer (0.0 - 1.0).</span>
-<a id="__codelineno-0-412" name="__codelineno-0-412"></a><span class="sd">            A value of 0.95 means the trails will fade by 5% each frame. Defaults to 0.95.</span>
+<a id="__codelineno-0-412" name="__codelineno-0-412"></a><span class="sd">            A value of 0.97 means the trails will fade by 3% each frame. Defaults to 0.97.</span>
 <a id="__codelineno-0-413" name="__codelineno-0-413"></a>
 <a id="__codelineno-0-414" name="__codelineno-0-414"></a><span class="sd">    Example:</span>
 <a id="__codelineno-0-415" name="__codelineno-0-415"></a><span class="sd">        Basic initialization:</span>
@@ -1411,8 +1439,7 @@ For example, if you added an Axis first and then a VectorField, the vector field
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>FluxRender/core.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-582">582</a></span>
-<span class="normal"><a href="#__codelineno-0-583">583</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-583">583</a></span>
 <span class="normal"><a href="#__codelineno-0-584">584</a></span>
 <span class="normal"><a href="#__codelineno-0-585">585</a></span>
 <span class="normal"><a href="#__codelineno-0-586">586</a></span>
@@ -1431,27 +1458,30 @@ For example, if you added an Axis first and then a VectorField, the vector field
 <span class="normal"><a href="#__codelineno-0-599">599</a></span>
 <span class="normal"><a href="#__codelineno-0-600">600</a></span>
 <span class="normal"><a href="#__codelineno-0-601">601</a></span>
-<span class="normal"><a href="#__codelineno-0-602">602</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-582" name="__codelineno-0-582"></a><span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
-<a id="__codelineno-0-583" name="__codelineno-0-583"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-584" name="__codelineno-0-584"></a><span class="sd">    Adds a renderable object to the scene.</span>
-<a id="__codelineno-0-585" name="__codelineno-0-585"></a>
-<a id="__codelineno-0-586" name="__codelineno-0-586"></a><span class="sd">    The object must implement the `render(scene)` and `update(scene)` methods.</span>
-<a id="__codelineno-0-587" name="__codelineno-0-587"></a>
-<a id="__codelineno-0-588" name="__codelineno-0-588"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-589" name="__codelineno-0-589"></a><span class="sd">        *args: One or more objects to be added to the scene. Each object must have</span>
-<a id="__codelineno-0-590" name="__codelineno-0-590"></a><span class="sd">            render(scene) and update(scene) methods. Optionally, they can have</span>
-<a id="__codelineno-0-591" name="__codelineno-0-591"></a><span class="sd">            coords and scene attributes, which will be set to the current scene&#39;s</span>
-<a id="__codelineno-0-592" name="__codelineno-0-592"></a><span class="sd">            coordinate system and the scene itself if not already set.</span>
-<a id="__codelineno-0-593" name="__codelineno-0-593"></a>
-<a id="__codelineno-0-594" name="__codelineno-0-594"></a><span class="sd">    Notes:</span>
-<a id="__codelineno-0-595" name="__codelineno-0-595"></a><span class="sd">        * **Order of rendering**: Objects are rendered in the order they are added. The first object added will be rendered first (at the bottom layer), and the last object will be rendered last (on top).</span>
-<a id="__codelineno-0-596" name="__codelineno-0-596"></a><span class="sd">        For example, if you added an Axis first and then a VectorField, the vector field will partially cover the coordinate axes.</span>
-<a id="__codelineno-0-597" name="__codelineno-0-597"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-598" name="__codelineno-0-598"></a>
-<a id="__codelineno-0-599" name="__codelineno-0-599"></a>    <span class="k">for</span> <span class="n">new_object</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
-<a id="__codelineno-0-600" name="__codelineno-0-600"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_process_addition</span><span class="p">(</span><span class="n">new_object</span><span class="p">)</span>
-<a id="__codelineno-0-601" name="__codelineno-0-601"></a>        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">new_object</span><span class="p">,</span> <span class="s1">&#39;_init&#39;</span><span class="p">):</span>
-<a id="__codelineno-0-602" name="__codelineno-0-602"></a>            <span class="n">new_object</span><span class="o">.</span><span class="n">_init</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-602">602</a></span>
+<span class="normal"><a href="#__codelineno-0-603">603</a></span>
+<span class="normal"><a href="#__codelineno-0-604">604</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-583" name="__codelineno-0-583"></a><span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+<a id="__codelineno-0-584" name="__codelineno-0-584"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-585" name="__codelineno-0-585"></a><span class="sd">    Adds a renderable object to the scene.</span>
+<a id="__codelineno-0-586" name="__codelineno-0-586"></a>
+<a id="__codelineno-0-587" name="__codelineno-0-587"></a><span class="sd">    The object must implement the `render(scene)` and `update(scene)` methods.</span>
+<a id="__codelineno-0-588" name="__codelineno-0-588"></a>
+<a id="__codelineno-0-589" name="__codelineno-0-589"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-590" name="__codelineno-0-590"></a><span class="sd">        *args: One or more objects to be added to the scene. Each object must have</span>
+<a id="__codelineno-0-591" name="__codelineno-0-591"></a><span class="sd">            render(scene) and update(scene) methods. Optionally, they can have</span>
+<a id="__codelineno-0-592" name="__codelineno-0-592"></a><span class="sd">            coords and scene attributes, which will be set to the current scene&#39;s</span>
+<a id="__codelineno-0-593" name="__codelineno-0-593"></a><span class="sd">            coordinate system and the scene itself if not already set.</span>
+<a id="__codelineno-0-594" name="__codelineno-0-594"></a>
+<a id="__codelineno-0-595" name="__codelineno-0-595"></a><span class="sd">    Notes:</span>
+<a id="__codelineno-0-596" name="__codelineno-0-596"></a><span class="sd">        * **Order of rendering**: Objects are rendered in the order they are added. The first object added will be rendered first (at the bottom layer), and the last object will be rendered last (on top).</span>
+<a id="__codelineno-0-597" name="__codelineno-0-597"></a><span class="sd">        For example, if you added an Axis first and then a VectorField, the vector field will partially cover the coordinate axes.</span>
+<a id="__codelineno-0-598" name="__codelineno-0-598"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-599" name="__codelineno-0-599"></a>
+<a id="__codelineno-0-600" name="__codelineno-0-600"></a>    <span class="k">for</span> <span class="n">new_object</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+<a id="__codelineno-0-601" name="__codelineno-0-601"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_object</span><span class="p">)</span>
+<a id="__codelineno-0-602" name="__codelineno-0-602"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_process_addition</span><span class="p">(</span><span class="n">new_object</span><span class="p">)</span>
+<a id="__codelineno-0-603" name="__codelineno-0-603"></a>        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">new_object</span><span class="p">,</span> <span class="s1">&#39;_init&#39;</span><span class="p">):</span>
+<a id="__codelineno-0-604" name="__codelineno-0-604"></a>            <span class="n">new_object</span><span class="o">.</span><span class="n">_init</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
