@@ -44,6 +44,10 @@ theme:
 
 nav:
   - Home: index.md
+  - Getting Started:
+      - Quick Start (10 lines!): getting_started/quick_start.md
+      - Building a Workspace: getting_started/building_workspace.md
+      - Advancet Setup: getting_started/advanced_setup.md
   - API Reference:
       - Core & Scene:
         - CoordinateSystem: coordinate_system.md

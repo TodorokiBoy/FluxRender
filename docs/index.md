@@ -33,47 +33,19 @@ FluxRender is built around a philosophy of computational efficiency and seamless
 
 ## 🚀 Quick Start
 
-See the engine in action. This minimal setup creates a fully interactive, time-dependent swirling vortex, evaluated and colored dynamically based on its rotational velocity.
+See the engine in action. This minimal setup creates a fully interactive, swirling vortex, evaluated and colored dynamically based on its rotational velocity.
 
 ```python
 import FluxRender as fr
 import numpy as np
 
-# 1. Initialize the scene and coordinate system
-coords = fr.CoordinateSystem((-4, 4), (-4, 4), 1200, 800, keep_aspect_ratio=True)
-scene = fr.Scene("Swirling Vortex", coords)
+# Define flow mathematics (vector function)
+def flow_vector(x, y):
+    X = np.sin(x) * y
+    Y = np.cos(y) * x
+    return X, Y
 
-# 2. Define the mathematical flow with time dependency
-def swirling_vortex(x, y, t):
-    vector_dx = np.sin(x) + np.sin(y) * np.sin(t)
-    vector_dy = np.cos(x) + np.cos(y) * np.cos(t)
-    return vector_dx, vector_dy
-
-# 3. Configure a vibrant HSL Color Mapper for the velocity magnitude
-velocity_mapper = fr.ColorMapper(
-    min_hue=280, max_hue=180,       # Deep Purple to Neon Cyan
-)
-
-# 4. Create a vector field and particles
-vector_field = fr.VectorField(
-    vec_function=swirling_vortex,
-    color_mapper=velocity_mapper,
-    mode=fr.FieldMode.SCREEN_FIXED
-)
-particles = fr.ParticleSystem(
-    vec_function=swirling_vortex,
-    color_mapper=velocity_mapper,
-    radius=1,
-    count=15000
-)
-
-# 5. Create coordinate axes and grid
-axes = fr.Axis()
-grid = fr.Grid()
-
-# 6. Attach to the rendering core and launch
-scene.add(particles, vector_field, grid, axes)
-scene.run()
+fr.quick_simulate(flow_vector) # This single line sets up a full interactive simulation with default settings.
 ```
 
 

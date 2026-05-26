@@ -1520,7 +1520,13 @@ class ParticleSystem(VectorEntity):
             # Use the 98th percentile to prevent single singularities (like 1/x approaching 0)
             # from crushing the scale of the entire vector field.
 
-            statistical_maximum_length = max(np.percentile(lengths, self.max_speed_percentile), 1e-10)
+            valid_mask = lengths > 1e-8
+
+            if np.any(valid_mask):
+                # Calculate percentile ONLY from active, moving particles
+                statistical_maximum_length = max(np.percentile(lengths[valid_mask], self.max_speed_percentile), 1e-5)
+            else:
+                statistical_maximum_length = 1.0
 
             multiplier = 1.0
             normalized_lengths = np.clip(lengths / statistical_maximum_length, 0.0, 1.0)
