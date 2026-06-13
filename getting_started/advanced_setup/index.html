@@ -1118,7 +1118,7 @@
 <ol>
 <li><strong>Manual Environment Initialization:</strong> Setting up a custom CoordinateSystem and integrating a Scene manually.</li>
 <li><strong>Shared Math Engine Architecture:</strong> Instead of letting visual layers redundantly calculate the same mathematical formulas, we will initialize a single VectorMathEngine and inject it into both our vector field and particle system. This drastically improves GPU performance.</li>
-<li><strong>Interactive Data Probes &amp; Emitters:</strong> Attaching a CursorRegion to the mouse to act as both a localized particle emitter and a real-time data probe streaming values to the console.</li>
+<li><strong>Interactive Data Probes &amp; Emitters:</strong> Attaching a CursorRegion to the mouse to act as both a localized particle emitter and a real-time data probe streaming values to DynamicText.</li>
 <li><strong>Custom UI Integration:</strong> Building a manual UI button to toggle vector arrow normalization on the fly.</li>
 </ol>
 <h2 id="the-implementation"><strong>The Implementation</strong></h2>
@@ -1144,113 +1144,114 @@
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">CoordinateSystem</span><span class="p">(</span>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">x_range</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="n">y_range</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="n">width</span><span class="o">=</span><span class="mi">1600</span><span class="p">,</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">height</span><span class="o">=</span><span class="mi">900</span><span class="p">,</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="n">keep_aspect_ratio</span><span class="o">=</span><span class="kc">True</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="p">)</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="n">scene</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">Scene</span><span class="p">(</span>
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Advanced Topological Analysis&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>    <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span>
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>    <span class="n">background_color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.188</span><span class="p">,</span> <span class="mf">0.161</span><span class="p">),</span> <span class="c1"># Deep teal background</span>
-<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>    <span class="n">trail_fade_factor</span><span class="o">=</span><span class="mf">0.985</span> <span class="c1"># Smoother, longer particle trails</span>
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="p">)</span>
-<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>
-<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="n">grid</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.788</span><span class="p">,</span> <span class="mf">0.851</span><span class="p">,</span> <span class="mf">0.812</span><span class="p">))</span>
-<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="n">axes</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">Axis</span><span class="p">(</span>
-<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.933</span><span class="p">,</span> <span class="mf">0.612</span><span class="p">),</span>
-<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>    <span class="n">thickness</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    <span class="n">label_color</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.933</span><span class="p">,</span> <span class="mf">0.612</span><span class="p">),</span>
-<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>    <span class="n">label_size</span><span class="o">=</span><span class="mi">18</span>
-<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="p">)</span>
-<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>
-<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="c1"># ==========================================</span>
-<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="c1"># 3. SHARED MATH ENGINE (DEPENDENCY INJECTION)</span>
-<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="c1"># ==========================================</span>
-<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="c1"># Advanced Optimization: By initializing a centralized Math Engine and</span>
-<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="c1"># injecting it into multiple visual entities later, we prevent the GPU</span>
-<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a><span class="c1"># from calculating the exact same mathematical equations redundantly.</span>
-<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a><span class="n">math_engine</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">VectorMathEngine</span><span class="p">(</span>
-<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>    <span class="n">scene</span><span class="o">=</span><span class="n">scene</span><span class="p">,</span>
-<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>    <span class="n">primary_vector_function</span><span class="o">=</span><span class="n">flow_vector</span>
-<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a><span class="p">)</span>
-<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>
-<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a><span class="n">custom_velocity_mapper</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">ColorMapper</span><span class="p">(</span>
-<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>    <span class="n">min_hue</span><span class="o">=</span><span class="mi">190</span><span class="p">,</span>
-<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>    <span class="n">max_hue</span><span class="o">=</span><span class="mi">75</span><span class="p">,</span>
-<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>    <span class="n">min_lightness</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
-<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>    <span class="n">max_lightness</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
-<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>    <span class="n">min_saturation</span><span class="o">=</span><span class="mi">1</span>
-<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a><span class="p">)</span>
-<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>
-<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a><span class="c1"># ==========================================</span>
-<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a><span class="c1"># 4. INTERACTIVE REGIONS &amp; DATA PROBES</span>
-<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a><span class="c1"># ==========================================</span>
-<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a><span class="c1"># The CursorRegion will act as a localized spatial boundary tied to the mouse.</span>
-<a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a><span class="n">mouse_region</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">CursorRegion</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>
-<a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a><span class="c1"># The DataProbe listens to the region and extracts local mathematical properties.</span>
-<a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a><span class="k">def</span><span class="w"> </span><span class="nf">print_curl_value</span><span class="p">(</span><span class="n">curl_val</span><span class="p">):</span>
-<a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Current curl under cursor: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">curl_val</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>
-<a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a><span class="n">probe</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">DataProbe</span><span class="p">(</span>
-<a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>    <span class="n">target_region</span><span class="o">=</span><span class="n">mouse_region</span><span class="p">,</span>
-<a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a>    <span class="n">math_engine</span><span class="o">=</span><span class="n">math_engine</span><span class="p">,</span>
-<a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a>    <span class="n">measured_property</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">Property</span><span class="o">.</span><span class="n">CURL</span>
-<a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a><span class="p">)</span>
-<a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a><span class="n">probe</span><span class="o">.</span><span class="n">add_listener</span><span class="p">(</span><span class="n">print_curl_value</span><span class="p">)</span>
-<a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a>
-<a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a><span class="c1"># ==========================================</span>
-<a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a><span class="c1"># 5. VISUAL ENTITIES</span>
-<a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a><span class="c1"># ==========================================</span>
-<a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a><span class="n">vortex_vector_field</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">VectorField</span><span class="p">(</span>
-<a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a>    <span class="n">vec_function</span><span class="o">=</span><span class="n">math_engine</span><span class="p">,</span>           <span class="c1"># Injecting the shared engine</span>
-<a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a>    <span class="n">color_mapper</span><span class="o">=</span><span class="n">custom_velocity_mapper</span><span class="p">,</span>
-<a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a>    <span class="n">mode</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">FieldMode</span><span class="o">.</span><span class="n">SCREEN_FIXED</span><span class="p">,</span>
-<a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a>    <span class="n">color_property</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">Property</span><span class="o">.</span><span class="n">CURL</span>
-<a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a><span class="p">)</span>
-<a id="__codelineno-0-83" name="__codelineno-0-83" href="#__codelineno-0-83"></a>
-<a id="__codelineno-0-84" name="__codelineno-0-84" href="#__codelineno-0-84"></a><span class="n">vortex_particles</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">ParticleSystem</span><span class="p">(</span>
-<a id="__codelineno-0-85" name="__codelineno-0-85" href="#__codelineno-0-85"></a>    <span class="n">vec_function</span><span class="o">=</span><span class="n">math_engine</span><span class="p">,</span>           <span class="c1"># Injecting the shared engine</span>
-<a id="__codelineno-0-86" name="__codelineno-0-86" href="#__codelineno-0-86"></a>    <span class="n">color_mapper</span><span class="o">=</span><span class="n">custom_velocity_mapper</span><span class="p">,</span>
-<a id="__codelineno-0-87" name="__codelineno-0-87" href="#__codelineno-0-87"></a>    <span class="n">radius</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-<a id="__codelineno-0-88" name="__codelineno-0-88" href="#__codelineno-0-88"></a>    <span class="n">count</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
-<a id="__codelineno-0-89" name="__codelineno-0-89" href="#__codelineno-0-89"></a>    <span class="n">emitter</span><span class="o">=</span><span class="n">mouse_region</span><span class="p">,</span>              <span class="c1"># Particles spawn ONLY within the cursor region</span>
-<a id="__codelineno-0-90" name="__codelineno-0-90" href="#__codelineno-0-90"></a>    <span class="n">color_property</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">Property</span><span class="o">.</span><span class="n">CURL</span><span class="p">,</span>
-<a id="__codelineno-0-91" name="__codelineno-0-91" href="#__codelineno-0-91"></a><span class="p">)</span>
-<a id="__codelineno-0-92" name="__codelineno-0-92" href="#__codelineno-0-92"></a>
-<a id="__codelineno-0-93" name="__codelineno-0-93" href="#__codelineno-0-93"></a><span class="c1"># ==========================================</span>
-<a id="__codelineno-0-94" name="__codelineno-0-94" href="#__codelineno-0-94"></a><span class="c1"># 6. CUSTOM USER INTERFACE</span>
-<a id="__codelineno-0-95" name="__codelineno-0-95" href="#__codelineno-0-95"></a><span class="c1"># ==========================================</span>
-<a id="__codelineno-0-96" name="__codelineno-0-96" href="#__codelineno-0-96"></a><span class="k">def</span><span class="w"> </span><span class="nf">toggle_normalization</span><span class="p">():</span>
-<a id="__codelineno-0-97" name="__codelineno-0-97" href="#__codelineno-0-97"></a>    <span class="n">vortex_vector_field</span><span class="o">.</span><span class="n">normalized</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">vortex_vector_field</span><span class="o">.</span><span class="n">normalized</span>
-<a id="__codelineno-0-98" name="__codelineno-0-98" href="#__codelineno-0-98"></a>
-<a id="__codelineno-0-99" name="__codelineno-0-99" href="#__codelineno-0-99"></a><span class="c1"># Building a manual UI button to toggle vector arrow normalization on the fly</span>
-<a id="__codelineno-0-100" name="__codelineno-0-100" href="#__codelineno-0-100"></a><span class="n">normalization_button</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span>
-<a id="__codelineno-0-101" name="__codelineno-0-101" href="#__codelineno-0-101"></a>    <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Toggle Normalization&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-102" name="__codelineno-0-102" href="#__codelineno-0-102"></a>    <span class="n">on_click</span><span class="o">=</span><span class="n">toggle_normalization</span><span class="p">,</span>
-<a id="__codelineno-0-103" name="__codelineno-0-103" href="#__codelineno-0-103"></a>    <span class="n">x_pos</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-0-104" name="__codelineno-0-104" href="#__codelineno-0-104"></a>    <span class="n">y_pos</span><span class="o">=</span><span class="n">scene</span><span class="o">.</span><span class="n">height</span> <span class="o">-</span> <span class="mi">20</span><span class="p">,</span> <span class="c1"># Adjusted to use relative layout based on scene height</span>
-<a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a>    <span class="n">width</span><span class="o">=</span><span class="mi">220</span><span class="p">,</span>
-<a id="__codelineno-0-106" name="__codelineno-0-106" href="#__codelineno-0-106"></a>    <span class="n">height</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
-<a id="__codelineno-0-107" name="__codelineno-0-107" href="#__codelineno-0-107"></a>    <span class="n">style</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">UIStyle</span><span class="p">(</span><span class="n">font_size</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
-<a id="__codelineno-0-108" name="__codelineno-0-108" href="#__codelineno-0-108"></a><span class="p">)</span>
-<a id="__codelineno-0-109" name="__codelineno-0-109" href="#__codelineno-0-109"></a>
-<a id="__codelineno-0-110" name="__codelineno-0-110" href="#__codelineno-0-110"></a><span class="c1"># ==========================================</span>
-<a id="__codelineno-0-111" name="__codelineno-0-111" href="#__codelineno-0-111"></a><span class="c1"># 7. ASSEMBLY &amp; EXECUTION</span>
-<a id="__codelineno-0-112" name="__codelineno-0-112" href="#__codelineno-0-112"></a><span class="c1"># ==========================================</span>
-<a id="__codelineno-0-113" name="__codelineno-0-113" href="#__codelineno-0-113"></a><span class="n">scene</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-<a id="__codelineno-0-114" name="__codelineno-0-114" href="#__codelineno-0-114"></a>    <span class="n">grid</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span>
-<a id="__codelineno-0-115" name="__codelineno-0-115" href="#__codelineno-0-115"></a>    <span class="n">vortex_vector_field</span><span class="p">,</span> <span class="n">vortex_particles</span><span class="p">,</span>
-<a id="__codelineno-0-116" name="__codelineno-0-116" href="#__codelineno-0-116"></a>    <span class="n">mouse_region</span><span class="p">,</span> <span class="n">probe</span><span class="p">,</span> <span class="n">normalization_button</span>
-<a id="__codelineno-0-117" name="__codelineno-0-117" href="#__codelineno-0-117"></a><span class="p">)</span>
-<a id="__codelineno-0-118" name="__codelineno-0-118" href="#__codelineno-0-118"></a><span class="n">scene</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="n">resolution</span><span class="o">=</span><span class="p">(</span><span class="mi">1600</span><span class="p">,</span> <span class="mi">900</span><span class="p">),</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">keep_aspect_ratio</span><span class="o">=</span><span class="kc">True</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="p">)</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="n">scene</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">Scene</span><span class="p">(</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Advanced Topological Analysis&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>    <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>    <span class="n">background_color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.188</span><span class="p">,</span> <span class="mf">0.161</span><span class="p">),</span> <span class="c1"># Deep teal background</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>    <span class="n">trail_fade_factor</span><span class="o">=</span><span class="mf">0.985</span> <span class="c1"># Smoother, longer particle trails</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="p">)</span>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="n">grid</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.788</span><span class="p">,</span> <span class="mf">0.851</span><span class="p">,</span> <span class="mf">0.812</span><span class="p">))</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="n">axes</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">Axis</span><span class="p">(</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>    <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.933</span><span class="p">,</span> <span class="mf">0.612</span><span class="p">),</span>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    <span class="n">thickness</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>    <span class="n">label_color</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.933</span><span class="p">,</span> <span class="mf">0.612</span><span class="p">),</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    <span class="n">label_size</span><span class="o">=</span><span class="mi">18</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="p">)</span>
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="c1"># ==========================================</span>
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="c1"># 3. SHARED MATH ENGINE (DEPENDENCY INJECTION)</span>
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="c1"># ==========================================</span>
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="c1"># Advanced Optimization: By initializing a centralized Math Engine and</span>
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="c1"># injecting it into multiple visual entities later, we prevent the GPU</span>
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="c1"># from calculating the exact same mathematical equations redundantly.</span>
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a><span class="n">math_engine</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">VectorMathEngine</span><span class="p">(</span>
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>    <span class="n">scene</span><span class="o">=</span><span class="n">scene</span><span class="p">,</span>
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>    <span class="n">primary_vector_function</span><span class="o">=</span><span class="n">flow_vector</span>
+<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a><span class="p">)</span>
+<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>
+<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a><span class="n">custom_velocity_mapper</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">ColorMapper</span><span class="p">(</span>
+<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>    <span class="n">min_hue</span><span class="o">=</span><span class="mi">190</span><span class="p">,</span>
+<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>    <span class="n">max_hue</span><span class="o">=</span><span class="mi">75</span><span class="p">,</span>
+<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>    <span class="n">min_lightness</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
+<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>    <span class="n">max_lightness</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>    <span class="n">min_saturation</span><span class="o">=</span><span class="mi">1</span>
+<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a><span class="p">)</span>
+<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>
+<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a><span class="c1"># ==========================================</span>
+<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a><span class="c1"># 4. INTERACTIVE REGIONS &amp; DATA PROBES</span>
+<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a><span class="c1"># ==========================================</span>
+<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a><span class="c1"># The CursorRegion will act as a localized spatial boundary tied to the mouse.</span>
+<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a><span class="n">mouse_region</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">CursorRegion</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>
+<a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a><span class="c1"># The DataProbe listens to the region and extracts local mathematical properties.</span>
+<a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a><span class="n">probe</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">DataProbe</span><span class="p">(</span>
+<a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>    <span class="n">target_region</span><span class="o">=</span><span class="n">mouse_region</span><span class="p">,</span>
+<a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>    <span class="n">target_entity</span><span class="o">=</span><span class="n">math_engine</span><span class="p">,</span>
+<a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>    <span class="n">measured_property</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">Property</span><span class="o">.</span><span class="n">VELOCITY</span>
+<a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a><span class="p">)</span>
+<a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>
+<a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a><span class="c1"># ==========================================</span>
+<a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a><span class="c1"># 5. VISUAL ENTITIES</span>
+<a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a><span class="c1"># ==========================================</span>
+<a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a><span class="n">vortex_vector_field</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">VectorField</span><span class="p">(</span>
+<a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a>    <span class="n">vec_function</span><span class="o">=</span><span class="n">math_engine</span><span class="p">,</span>           <span class="c1"># Injecting the shared engine</span>
+<a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a>    <span class="n">color_mapper</span><span class="o">=</span><span class="n">custom_velocity_mapper</span><span class="p">,</span>
+<a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a>    <span class="n">mode</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">FieldMode</span><span class="o">.</span><span class="n">SCREEN_FIXED</span><span class="p">,</span>
+<a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a>    <span class="n">color_property</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">Property</span><span class="o">.</span><span class="n">CURL</span><span class="p">,</span>
+<a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a><span class="p">)</span>
+<a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a>
+<a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a><span class="n">vortex_particles</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">ParticleSystem</span><span class="p">(</span>
+<a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a>    <span class="n">vec_function</span><span class="o">=</span><span class="n">math_engine</span><span class="p">,</span>           <span class="c1"># Injecting the shared engine</span>
+<a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a>    <span class="n">color_mapper</span><span class="o">=</span><span class="n">custom_velocity_mapper</span><span class="p">,</span>
+<a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a>    <span class="n">radius</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-0-83" name="__codelineno-0-83" href="#__codelineno-0-83"></a>    <span class="n">count</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span>
+<a id="__codelineno-0-84" name="__codelineno-0-84" href="#__codelineno-0-84"></a>    <span class="n">emitter</span><span class="o">=</span><span class="n">mouse_region</span><span class="p">,</span>              <span class="c1"># Particles spawn ONLY within the cursor region</span>
+<a id="__codelineno-0-85" name="__codelineno-0-85" href="#__codelineno-0-85"></a>    <span class="n">color_property</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">Property</span><span class="o">.</span><span class="n">CURL</span><span class="p">,</span>
+<a id="__codelineno-0-86" name="__codelineno-0-86" href="#__codelineno-0-86"></a><span class="p">)</span>
+<a id="__codelineno-0-87" name="__codelineno-0-87" href="#__codelineno-0-87"></a>
+<a id="__codelineno-0-88" name="__codelineno-0-88" href="#__codelineno-0-88"></a><span class="c1"># ==========================================</span>
+<a id="__codelineno-0-89" name="__codelineno-0-89" href="#__codelineno-0-89"></a><span class="c1"># 6. CUSTOM USER INTERFACE</span>
+<a id="__codelineno-0-90" name="__codelineno-0-90" href="#__codelineno-0-90"></a><span class="c1"># ==========================================</span>
+<a id="__codelineno-0-91" name="__codelineno-0-91" href="#__codelineno-0-91"></a><span class="k">def</span><span class="w"> </span><span class="nf">toggle_normalization</span><span class="p">():</span>
+<a id="__codelineno-0-92" name="__codelineno-0-92" href="#__codelineno-0-92"></a>    <span class="n">vortex_vector_field</span><span class="o">.</span><span class="n">normalized</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">vortex_vector_field</span><span class="o">.</span><span class="n">normalized</span>
+<a id="__codelineno-0-93" name="__codelineno-0-93" href="#__codelineno-0-93"></a>
+<a id="__codelineno-0-94" name="__codelineno-0-94" href="#__codelineno-0-94"></a><span class="c1"># Building a manual UI button to toggle vector arrow normalization on the fly</span>
+<a id="__codelineno-0-95" name="__codelineno-0-95" href="#__codelineno-0-95"></a><span class="n">normalization_button</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span>
+<a id="__codelineno-0-96" name="__codelineno-0-96" href="#__codelineno-0-96"></a>    <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Toggle Normalization&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-97" name="__codelineno-0-97" href="#__codelineno-0-97"></a>    <span class="n">on_click</span><span class="o">=</span><span class="n">toggle_normalization</span><span class="p">,</span>
+<a id="__codelineno-0-98" name="__codelineno-0-98" href="#__codelineno-0-98"></a>    <span class="n">position</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="n">scene</span><span class="o">.</span><span class="n">height</span> <span class="o">-</span> <span class="mi">20</span><span class="p">),</span> <span class="c1"># Adjusted to use relative layout based on scene height</span>
+<a id="__codelineno-0-99" name="__codelineno-0-99" href="#__codelineno-0-99"></a>    <span class="n">width</span><span class="o">=</span><span class="mi">220</span><span class="p">,</span>
+<a id="__codelineno-0-100" name="__codelineno-0-100" href="#__codelineno-0-100"></a>    <span class="n">height</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+<a id="__codelineno-0-101" name="__codelineno-0-101" href="#__codelineno-0-101"></a>    <span class="n">style</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">UIStyle</span><span class="p">(</span><span class="n">font_size</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<a id="__codelineno-0-102" name="__codelineno-0-102" href="#__codelineno-0-102"></a><span class="p">)</span>
+<a id="__codelineno-0-103" name="__codelineno-0-103" href="#__codelineno-0-103"></a>
+<a id="__codelineno-0-104" name="__codelineno-0-104" href="#__codelineno-0-104"></a><span class="c1"># Dynamic text that updates in real-time to show the velocity at the cursor&#39;s location</span>
+<a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a><span class="n">velocity_info</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">DynamicText</span><span class="p">(</span>
+<a id="__codelineno-0-106" name="__codelineno-0-106" href="#__codelineno-0-106"></a>    <span class="n">text</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Velocity at Cursor: </span><span class="si">{</span><span class="n">probe</span><span class="o">.</span><span class="n">value</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-107" name="__codelineno-0-107" href="#__codelineno-0-107"></a>    <span class="n">align</span><span class="o">=</span><span class="n">fr</span><span class="o">.</span><span class="n">Align</span><span class="o">.</span><span class="n">LEFT_BOTTOM</span><span class="p">,</span>
+<a id="__codelineno-0-108" name="__codelineno-0-108" href="#__codelineno-0-108"></a>    <span class="n">position</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+<a id="__codelineno-0-109" name="__codelineno-0-109" href="#__codelineno-0-109"></a><span class="p">)</span>
+<a id="__codelineno-0-110" name="__codelineno-0-110" href="#__codelineno-0-110"></a>
+<a id="__codelineno-0-111" name="__codelineno-0-111" href="#__codelineno-0-111"></a><span class="c1"># ==========================================</span>
+<a id="__codelineno-0-112" name="__codelineno-0-112" href="#__codelineno-0-112"></a><span class="c1"># 7. ASSEMBLY &amp; EXECUTION</span>
+<a id="__codelineno-0-113" name="__codelineno-0-113" href="#__codelineno-0-113"></a><span class="c1"># ==========================================</span>
+<a id="__codelineno-0-114" name="__codelineno-0-114" href="#__codelineno-0-114"></a><span class="n">scene</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+<a id="__codelineno-0-115" name="__codelineno-0-115" href="#__codelineno-0-115"></a>    <span class="n">grid</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span>
+<a id="__codelineno-0-116" name="__codelineno-0-116" href="#__codelineno-0-116"></a>    <span class="n">vortex_vector_field</span><span class="p">,</span> <span class="n">vortex_particles</span><span class="p">,</span>
+<a id="__codelineno-0-117" name="__codelineno-0-117" href="#__codelineno-0-117"></a>    <span class="n">mouse_region</span><span class="p">,</span> <span class="n">probe</span><span class="p">,</span> <span class="n">normalization_button</span><span class="p">,</span> <span class="n">velocity_info</span>
+<a id="__codelineno-0-118" name="__codelineno-0-118" href="#__codelineno-0-118"></a><span class="p">)</span>
+<a id="__codelineno-0-119" name="__codelineno-0-119" href="#__codelineno-0-119"></a><span class="n">scene</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </code></pre></div>
 <h2 id="key-architectural-takeaways"><strong>Key Architectural Takeaways</strong></h2>
 <ul>
 <li><strong>Polymorphic Dependency Injection:</strong> Notice the <code>vec_function</code> parameter when initializing both the <code>VectorField</code> and the <code>ParticleSystem</code>. Instead of passing the raw mathematical function, we injected the centralized <code>math_engine</code> instance. FluxRender's intelligent API accepts either, but sharing a single engine prevents the GPU from calculating the exact same mathematical equations redundantly across multiple visual layers.</li>
 <li><strong>Component-Based UI:</strong> You are not restricted to our pre-built menus. As demonstrated by the normalization toggle, you can instantiate a standalone <code>Button</code>, define a custom state-toggling callback, and inject it directly into the scene hierarchy using layout coordinates relative to the screen dimensions.</li>
-<li><strong>Dynamic Interactivity &amp; Probing:</strong> The <code>CursorRegion</code> proves that FluxRender is not just a passive renderer. It actively maps screen coordinates to mathematical space, serving a powerful dual purpose in this example: acting as a localized particle emitter and simultaneously functioning as a real-time <code>DataProbe</code> streaming topological properties (like Curl) directly to the console.</li>
+<li><strong>Dynamic Interactivity &amp; Probing:</strong> The <code>CursorRegion</code> proves that FluxRender is not just a passive renderer. It actively maps screen coordinates to mathematical space, serving a powerful dual purpose in this example: acting as a localized particle emitter and simultaneously functioning as a real-time <code>DataProbe</code> streaming topological properties (like Velocity) directly to DynamicText.</li>
 </ul>
 <p>You now possess the foundational knowledge to build anything from a simple fluid dynamics visualizer to a complex, interactive topological dashboard. Dive into the <a href="../../coordinate_system/"><strong>API Reference</strong></a> to explore the complete set of parameters available for every module.</p>
 
