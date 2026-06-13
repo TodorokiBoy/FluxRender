@@ -1,4 +1,5 @@
 ::: FluxRender.ui.Button
+::: FluxRender.ui.DynamicText
 ::: FluxRender.ui.Axis
 ::: FluxRender.ui.Grid
 ::: FluxRender.ui.UIStyle
@@ -10,3 +11,4 @@
 ::: FluxRender.ui.create_mode_switch
 ::: FluxRender.ui.create_property_switch
 ::: FluxRender.ui.create_color_scale_switch
+::: FluxRender.ui.create_cursor_probe_display

@@ -1,8 +1,8 @@
 from .constants import Property
 from .validators import _count_function_parameters, _fatal_error
 
-
 from . import math_engine as me
+from . import entities as en
 
 class DataProbe:
     """A measurement instrument that tracks a spatial target and evaluates mathematical properties.
@@ -14,12 +14,12 @@ class DataProbe:
     listener functions via a callback system.
     """
 
-    def __init__(self, target_region, math_engine: me.MathEngine, measured_property: Property = None):
+    def __init__(self, target_region, target_entity: me.VectorMathEngine | en.VectorField | en.ParticleSystem, measured_property: Property = None):
         """
         Args:
             target_region (SpatialRegion): The spatial entity to be tracked. This object must provide
                 a mechanism to retrieve its current coordinates (e.g., a `center` property or method).
-            math_engine (me.MathEngine): The core mathematical engine responsible for parsing and
+            target_entity (me.VectorMathEngine | en.VectorField | en.ParticleSystem): The core mathematical engine or entity responsible for parsing and
                 evaluating the vector field logic at the given coordinates.
             measured_property (Property, optional): The specific mathematical property to measure
                 at the target's location (e.g., Property.DIVERGENCE). If set to None, the probe evaluates
@@ -50,16 +50,47 @@ class DataProbe:
 
             probe = fr.DataProbe(
                 target_region = interactive_cursor,
-                math_engine = math_engine,
+                target_entity = math_engine, # You can also use a VectorField or ParticleSystem instance here since they also implement the necessary evaluation interface
                 measured_property = fr.Property.VELOCITY
             )
             probe.add_listener(velocity_callback) # Registers the callback to receive velocity updates at the cursor's position
             ```
+
+            A comprehensive example of using DataProbe to display velocity:
+            ```python
+            import FluxRender as fr
+
+            scene = fr.create_workspace()
+
+            def swirling_vortex(x, y):
+                return y, -x
+
+            vector_field = fr.VectorField(swirling_vortex)
+
+            # To pass data (coordinates) to DataProbe we need a region
+            cursor = fr.CursorRegion(always_active=True)
+
+            # We are creating a DataProbe that will measure velocity
+            probe = fr.DataProbe(
+                target_region=cursor,
+                target_entity=vector_field,
+                measured_property=fr.Property.VELOCITY
+            )
+
+            # We display velocity using DynamicText
+            text = fr.DynamicText(text=lambda: f"Velocity: {probe.value}",)
+
+
+            scene.add(vector_field,cursor, probe, text)
+            scene.run()
+            ```
         """
 
         self.target_region = target_region
-        self.math_engine = math_engine
+        self.math_engine = target_entity
         self.measured_property = measured_property
+
+        self.value = 0 if measured_property is not None else (0, 0)  # Initialize value based on property type
 
         self._callbacks = []
 
@@ -107,6 +138,8 @@ class DataProbe:
             probe_x,
             probe_y
         )
+
+        self.value = calculated_value if self.measured_property is not None else (vector_dx, vector_dy)
 
         for callback in self._callbacks:
             if self.measured_property is None:

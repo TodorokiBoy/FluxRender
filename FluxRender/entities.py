@@ -21,7 +21,7 @@ class Renderable:
     def update(self, scene: cr.Scene):
         pass
 
-    def _init(self, scene: cr.Scene):
+    def _init(self, scene: cr.Scene = None):
         pass
 
 class VectorEntity(Renderable):
@@ -271,6 +271,38 @@ class VectorEntity(Renderable):
         """
 
         return self.math_engine._safe_evaluate_scalar_function(user_defined_function, *spatial_arguments)
+
+    def evaluate_field_and_property(self, property_type: Property | None, spatial_coordinate_x: float, spatial_coordinate_y: float):
+        """
+        Evaluates the primary vector function and the specified property at the given spatial coordinates.
+
+        This method behaves exactly like evaluate_vector_field, but additionally calculates
+        a scalar value given by property_type (e.g. divergence, rotation, velocity).
+
+        Args:
+            property_type (Property | None): The specific property to calculate based on the evaluated vector field. If set to None, the method will only evaluate the primary vector function and bypass any property calculations for maximum performance when only vector components are needed.
+            spatial_coordinate_x (float / ndarray): The x-coordinate(s) in the mathematical world space.
+            spatial_coordinate_y (float / ndarray): The y-coordinate(s) in the mathematical world space.
+
+        Returns:
+            tuple: A tuple (vector_x, vector_y, property_value) where:
+                - vector_x (float / ndarray): The x-component(s) of the evaluated vector field.
+                - vector_y (float / ndarray): The y-component(s) of the evaluated vector field.
+                - property_value (float / ndarray or None): The calculated property value based on the specified property_type. This will be None if property_type is set to None, indicating that no property calculation was performed.
+
+        Notes:
+            * **Performance Optimization** This method is optimized for performance. If the caller only requires the vector components without any derived properties, they can set property_type to None to skip the property evaluation step entirely, which can significantly reduce computation time, especially for complex properties that require additional function evaluations.
+            * **Time Injection** If the primary vector function or the property evaluator function is time-dependent, this method will automatically inject the current simulation time during their evaluation, allowing for dynamic, time-evolving fields without requiring the user to manage time parameters manually.
+
+        Example:
+            Evaluating the vector field and its velocity property at a single point:
+            ```python
+
+            ```
+
+        """
+
+        return self.math_engine.evaluate_field_and_property(property_type, spatial_coordinate_x, spatial_coordinate_y)
 
 
 

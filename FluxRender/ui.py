@@ -1,11 +1,14 @@
 from .constants import Align, ArrowStyle, FieldMode, Property, ScaleType
 from .graphics import ArrowAtlas, draw_rotated_image
-from .validators import EnumValidator, NonNegativeInt, _count_function_parameters, _fatal_error, PositiveNumber, PositiveInt, CoordinateSequence, StrictBool, Callable, StrictString
+from .validators import EnumValidator, NonNegativeInt, _count_function_parameters, _fatal_error, PositiveNumber, PositiveInt, CoordinateSequence, StrictBool, Callable, StrictString, IntCoordinateSequence
 from .colors import ColorSequence
 
 
 from . import core as cr
 from . import entities as en
+from . import regions as rg
+from . import math_engine as me
+from . import probes as pr
 
 from dataclasses import dataclass
 from typing import Sequence, Tuple, Optional
@@ -70,7 +73,7 @@ class UIStyle:
             text_color = (1.0, 1.0, 0.0, 1.0)
         )
 
-        warning_container = fr.VBox(x_pos=100, y_pos=100, style=warning_panel_style)
+        warning_container = fr.VBox(position=(100, 100), style=warning_panel_style)
 
         # Define function to handle button click
         def acknowledge_warning():
@@ -111,7 +114,7 @@ GLOBAL_THEME = UIStyle(
     hover_text_color=(1, 1, 1, 1),
     active_text_color=(1, 1, 1, 1),
     text_stroke=0,
-    text_stroke_color=(0, 0, 0, 1),
+    text_stroke_color=(1, 1, 1, 1),
     border_radius=10,
     font_size=23,
     display=True,
@@ -134,19 +137,26 @@ class UIWidget(en.Renderable):
     """
     DEFAULT_STYLE = UIStyle()
 
-    x_pos = NonNegativeInt()
-    y_pos = NonNegativeInt()
+    position = IntCoordinateSequence()
     width = PositiveInt()
     height = PositiveInt()
+    align = EnumValidator(Align)
 
-    def __init__(self, x_pos: int, y_pos: int, width: int = 150, height: int = 50, align: Align = Align.LEFT_TOP, style: UIStyle = None):
-        self.x_pos = x_pos
-        self.y_pos = y_pos
+    _container_hierarchy_stack = []
+
+
+    def __init__(self, position: Sequence[int], width: int = 150, height: int = 50, align: Align = Align.LEFT_TOP, style: UIStyle = None):
+        self.position = position
         self.width = width
         self.height = height
         self.align = align
 
         self._parent = None
+
+        # If this widget is being created inside a container context manager, we add it to that container's pending children list.
+        if UIWidget._container_hierarchy_stack:
+            active_container = UIWidget._container_hierarchy_stack[-1]
+            active_container._pending_children.append(self)
 
         if style is None:
             self.style = UIStyle()
@@ -213,10 +223,7 @@ class Button(UIWidget):
 
     text = StrictString()
     on_click = Callable()
-    align = EnumValidator(Align)
     is_active = StrictBool()
-    x_pos = NonNegativeInt()
-    y_pos = NonNegativeInt()
     width = PositiveInt()
     height = PositiveInt()
 
@@ -224,27 +231,21 @@ class Button(UIWidget):
     def __init__(self,
                  text: str,
                  on_click: Callable,
-                 x_pos: int = 0,
-                 y_pos: int = 50,
+                 position: Sequence[int] = (0, 50),
                  width: int = 150,
                  height: int = 50,
                  align: Align = Align.LEFT_TOP,
                  style: UIStyle = None
                  ):
         """
-        Initializes a new Button widget with interactive behavior and dynamic styling.
-
-        The button handles mouse interactions (hover, click) and renders text.
-
         Args:
             text (str): The label text displayed on the button.
             on_click (callable): The function to execute when the button is clicked.
                 This function can accept 0 arguments or 1 argument (the Button instance).
-            x_pos (int, optional): The horizontal position coordinate in pixels. Defaults to 0.
-            y_pos (int, optional): The vertical position coordinate in pixels. Defaults to 50.
+            position (Sequence[int], optional): The (x, y) coordinates for the button's anchor point. Defaults to (0, 50).
             width (int, optional): The width of the button in pixels. Defaults to 150.
             height (int, optional): The height of the button in pixels. Defaults to 50.
-            align (Align, optional): The alignment anchor point relative to the (x_pos, y_pos) coordinates
+            align (Align, optional): The alignment anchor point relative to the position coordinates
                 (e.g., LEFT_TOP, CENTER). Defaults to Align.LEFT_TOP.
             style (UIStyle, optional): A styling object defining colors and fonts.
                 If None, default styling is used.
@@ -279,10 +280,10 @@ class Button(UIWidget):
             ```
         """
 
-        self._is_inicialized = False
-        self._is_inicialized_shape = False
+        self._is_initialized = False
+        self._is_initialized_shape = False
 
-        super().__init__(x_pos, y_pos, width, height, align, style)
+        super().__init__(position, width, height, align, style)
 
         self._current_background_color = ti.Vector.field(4, dtype=float, shape=())
         self._current_text_color = ti.Vector.field(4, dtype=float, shape=())
@@ -305,7 +306,7 @@ class Button(UIWidget):
             _fatal_error(f"on_click function must have 0, 1, or unlimited parameters (*args or **kwargs). Got {self._params}.", "ValueError")
 
         self.is_active = False
-        self._is_inicialized = True
+        self._is_initialized = True
         self._bake_text_texture()
 
 
@@ -333,36 +334,36 @@ class Button(UIWidget):
         """
 
 
-        self.min_x = self.x_pos
-        self.max_x = min(self.x_pos + self.width, scene.width)
-        self.min_y = max(self.y_pos - self.height, 0)
-        self.max_y = self.y_pos
+        self.min_x = self.position[0]
+        self.max_x = min(self.position[0] + self.width, scene.width)
+        self.min_y = max(self.position[1] - self.height, 0)
+        self.max_y = self.position[1]
 
         if self.align == Align.RIGHT_TOP:
-            self.min_x = max(self.x_pos - self.width, 0)
-            self.max_x = self.x_pos
+            self.min_x = max(self.position[0] - self.width, 0)
+            self.max_x = self.position[0]
         elif self.align == Align.LEFT_BOTTOM:
-            self.min_y = self.y_pos
-            self.max_y = min(self.y_pos + self.height, scene.height)
+            self.min_y = self.position[1]
+            self.max_y = min(self.position[1] + self.height, scene.height)
         elif self.align == Align.RIGHT_BOTTOM:
-            self.min_x = max(self.x_pos - self.width, 0)
-            self.max_x = self.x_pos
-            self.min_y = self.y_pos
-            self.max_y = min(self.y_pos + self.height, scene.height)
+            self.min_x = max(self.position[0] - self.width, 0)
+            self.max_x = self.position[0]
+            self.min_y = self.position[1]
+            self.max_y = min(self.position[1] + self.height, scene.height)
         elif self.align == Align.CENTER:
-            self.min_x = max(self.x_pos - self.width // 2, 0)
-            self.max_x = min(self.x_pos + self.width // 2, scene.width)
-            self.min_y = max(self.y_pos - self.height // 2, 0)
-            self.max_y = min(self.y_pos + self.height // 2, scene.height)
+            self.min_x = max(self.position[0] - self.width // 2, 0)
+            self.max_x = min(self.position[0] + self.width // 2, scene.width)
+            self.min_y = max(self.position[1] - self.height // 2, 0)
+            self.max_y = min(self.position[1] + self.height // 2, scene.height)
 
         self.center_x = self.min_x + self.width // 2
         self.center_y = self.min_y + self.height // 2
 
-        self._is_inicialized_shape = True
+        self._is_initialized_shape = True
 
     def _flag_for_update(self, name):
-            if self._is_inicialized:
-                if self._is_inicialized_shape:
+            if self._is_initialized:
+                if self._is_initialized_shape:
                     self._init_shape(self.scene)
 
                 if name in ('width', 'height'):
@@ -570,9 +571,305 @@ class Button(UIWidget):
         return False
 
     def __repr__(self):
-        return f"<Button (text='{self.text}', x_pos={self.x_pos}, y_pos={self.y_pos}, width={self.width}, height={self.height}, align={self.align})>"
+        return f"<Button (text='{self.text}', position={self.position}, width={self.width}, height={self.height}, align={self.align})>"
 
 
+@ti.data_oriented
+class DynamicText(UIWidget):
+    """
+    A highly customizable UI widget designed for rendering text that can update dynamically.
+
+    This widget behaves similarly to a standard UI container or button, supporting rich
+    styling options such as backgrounds, text colors, font sizes, text strokes, padding,
+    and rounded corners. It utilizes an anchor-based alignment system to position itself
+    precisely on the screen. The widget features an intelligent sizing layout: it can either
+    force strict physical dimensions or automatically adapt its bounding box to fit the
+    current text content and padding.
+    """
+
+    DEFAULT_STYLE = UIStyle(
+        padding=(6, 6),
+        border_radius=10,
+    )
+
+    def __init__(self,
+                 text: str | Callable,
+                 position: Sequence[int] = (20, 100),
+                 align: Align = Align.LEFT_TOP,
+                 style: UIStyle = None,
+                 width: int | None = None,
+                 height: int | None = None
+                 ) -> None:
+        """
+        Args:
+            text (str | Callable): The static text string to display, or a zero-argument callable
+                (e.g., a lambda function) that provides a dynamically updating string every frame.
+            position (Sequence[int], optional): The absolute (x, y) screen coordinates serving as
+                the spatial anchor point for the widget. Defaults to (20, 100).
+            align (Align, optional): The alignment behavior relative to the `position` anchor
+                (e.g., Align.LEFT_TOP, Align.CENTER). Defaults to Align.LEFT_TOP.
+            style (UIStyle, optional): The styling object defining visual aesthetics like background color,
+                text color, font size, text stroke, padding, and border radius. Defaults to None.
+            width (int | None, optional): A fixed pixel width for the widget's bounding box.
+                If set to None, the width automatically scales to fit the text length and padding.
+            height (int | None, optional): A fixed pixel height for the widget's bounding box.
+                If set to None, the height automatically scales to fit the font metrics and padding.
+
+        Example:
+            Creating an automatically resizing label that displays a dynamically changing simulation value:
+            ```python
+            import FluxRender as fr
+            import numpy as np
+
+            # 1. Define the mathematical flow
+            def flow_vector(x, y):
+                X = np.sin(x) * y
+                Y = np.cos(y) * x
+                return X, Y
+
+            # 2. Initialize the automated workspace (gives us a Scene with grids and axes)
+            scene = fr.create_workspace()
+
+            # 3. Create a math engine based on our flow function
+            math_engine = fr.VectorMathEngine(scene, flow_vector)
+
+            # 4. Create vector field (optional)
+            vortex_vector_field = fr.VectorField(vec_function=flow_vector)
+
+
+            # 5. Set up a DataProbe to track the velocity at the mouse cursor's position
+            mouse_region = fr.CursorRegion(always_active=True)
+            probe = fr.DataProbe(
+                target_region=mouse_region,
+                math_engine=math_engine,
+                measured_property=fr.Property.VELOCITY
+            )
+
+
+            # Display the velocity value at the cursor position using a DynamicText widget
+            text = fr.DynamicText(
+                text=lambda: f"Current Velocity: {probe.value:.2f}",
+                position=(20, 600)
+            )
+
+            # 6. Add your entities to the scene and launch!
+            scene.add(vortex_vector_field, text, mouse_region, probe)
+            scene.run()
+            ```
+        """
+
+
+        super().__init__(position, 1, 1, align, style)
+
+        self.text = text
+        self._current_text = self.text() if callable(self.text) else self.text
+
+        self._max_chars = 400
+
+        self.color = ti.Vector.field(4, dtype=float, shape=())
+        self.background_color = ti.Vector.field(4, dtype=float, shape=())
+        self.stroke_color = ti.Vector.field(4, dtype=float, shape=())
+
+        self._char_indices = ti.field(dtype=int, shape=self._max_chars)
+        self._char_widths = ti.field(dtype=int, shape=self._max_chars)
+        self._char_x_positions = ti.field(dtype=int, shape=self._max_chars)
+
+        self._np_indices = np.zeros(self._max_chars, dtype=np.int32)
+        self._np_widths = np.zeros(self._max_chars, dtype=np.int32)
+        self._np_x_positions = np.zeros(self._max_chars, dtype=np.int32)
+
+        self._fixed_width = width
+        self._fixed_height = height
+        # tutaj wypisuje, że width i height są ustawione na None, co jest zgodne z tym, że domyślnie mają być automatycznie dopasowywane do tekstu
+
+    def _init(self):
+        self.font = FontAtlas(self.get_style("font_size"), self.get_style("text_stroke"))
+        self.width = int(sum(self.font.get_char_width(c) for c in self._current_text) + self.get_style("padding")[0] * 2) if self._fixed_width is None else self._fixed_width
+        self.height = int(self.font.char_height + self.get_style("padding")[1] * 2) if self._fixed_height is None else self._fixed_height
+
+    @ti.kernel
+    def _render_gpu(self, length: ti.i32, y_pos: ti.i32, total_start_x: ti.i32, total_end_x: ti.i32, border_radius: ti.i32, target: ti.template()): # type: ignore
+        char_height = self.font.char_height
+        text_color = self.color[None]
+        bg_color = self.background_color[None]
+        stroke_color = self.stroke_color[None]
+
+        start_x_safe = ti.max(0, total_start_x)
+        end_x_safe = ti.min(target.shape[0], total_end_x)
+        start_y_safe = ti.max(0, y_pos - self.height)
+        end_y_safe = ti.min(target.shape[1], y_pos)
+
+        half_w = float(total_end_x - total_start_x) / 2.0
+        half_h = float(self.height) / 2.0
+        cx = float(total_start_x) + half_w
+        cy = float(y_pos) - half_h
+
+        r = ti.min(float(border_radius), ti.min(half_w, half_h))
+
+        for x, y in ti.ndrange((start_x_safe, end_x_safe), (start_y_safe, end_y_safe)):
+            char_idx = -1
+            char_start_x = 0
+            char_width = 0
+
+            for i in range(length):
+                start = self._char_x_positions[i]
+                width = self._char_widths[i]
+
+                if x >= start and x < start + width:
+                    char_idx = i
+                    char_start_x = start
+                    char_width = width
+                    break
+
+            existing = target[x, y]
+            current_bg = existing
+
+            if bg_color.w > 0.02:
+                dx = ti.abs(float(x) - cx)
+                dy = ti.abs(float(y) - cy)
+
+                qx = dx - half_w + r
+                qy = dy - half_h + r
+
+                qx_out = ti.max(qx, 0.0)
+                qy_out = ti.max(qy, 0.0)
+
+                dist_out = ti.sqrt(qx_out * qx_out + qy_out * qy_out)
+                dist_in = ti.min(ti.max(qx, qy), 0.0)
+
+                dist = dist_out + dist_in - r
+
+                # Antyaliasing
+                shape_a = ti.max(0.0, ti.min(1.0, 0.5 - dist))
+
+                if shape_a > 0.0:
+                    actual_bg_alpha = bg_color.w * shape_a
+
+                    out_a_bg = actual_bg_alpha + existing.w * (1.0 - actual_bg_alpha)
+                    out_rgb_bg = (bg_color.xyz * actual_bg_alpha + existing.xyz * existing.w * (1.0 - actual_bg_alpha)) / ti.max(out_a_bg, 1e-6)
+                    current_bg = ti.Vector([out_rgb_bg.x, out_rgb_bg.y, out_rgb_bg.z, out_a_bg])
+
+
+            final_pixel = current_bg
+
+            if char_idx != -1:
+                u = (x - char_start_x) / char_width
+                v = (y - (y_pos - (self.height + char_height) // 2)) / char_height
+
+                tex_color = self.font.get_char_color(self._char_indices[char_idx], u, v)
+
+                # Extract the independent masks and sharpen them
+                stroke_mask = ti.math.smoothstep(0.3, 0.7, tex_color.x)
+                body_mask = ti.math.smoothstep(0.3, 0.7, tex_color.y)
+
+                source_color = text_color * body_mask + stroke_color * (1.0 - body_mask)
+                source_alpha = ti.max(stroke_mask, body_mask)
+
+                if source_alpha > 0.05:
+                    actual_src_alpha = source_alpha * source_color.w
+
+                    output_alpha = actual_src_alpha + current_bg.w * (1.0 - actual_src_alpha)
+                    output_rgb = (source_color.xyz * actual_src_alpha + current_bg.xyz * current_bg.w * (1.0 - actual_src_alpha)) / ti.max(output_alpha, 1e-6)
+                    final_pixel = ti.Vector([output_rgb.x, output_rgb.y, output_rgb.z, output_alpha])
+
+
+            target[x, y] = final_pixel
+
+    def render(self, scene):
+        if not (self.get_style("visible") and self.get_style("display")):
+            return
+
+        self.color[None] = ti.Vector(self.get_style("text_color"))
+        self.background_color[None] = ti.Vector(self.get_style("background_color"))
+        self.stroke_color[None] = ti.Vector(self.get_style("text_stroke_color"))
+
+        self._current_text = self.text() if callable(self.text) else self.text
+
+        if getattr(self, '_last_text', None) != self._current_text or getattr(self, '_last_pos', None) != self.position or getattr(self, '_last_align', None) != self.align:
+
+            # 1. Safely retrieve padding with a fallback
+            padding_tuple = self.get_style("padding") or (0, 0)
+            padding_horizontal = padding_tuple[0]
+            padding_vertical = padding_tuple[1]
+
+            self.width = int(sum(self.font.get_char_width(c) for c in self._current_text) + padding_horizontal * 2) if self._fixed_width is None else self._fixed_width
+            self.height = int(self.font.char_height + padding_vertical * 2) if self._fixed_height is None else self._fixed_height
+
+
+            chars = []
+
+            # 2. Calculate the physical boundaries of the entire background (container) relative to the anchor point
+            if self.align == Align.LEFT_TOP:
+                container_min_x = self.position[0]
+                container_max_y = self.position[1]
+            elif self.align == Align.RIGHT_TOP:
+                container_min_x = self.position[0] - self.width
+                container_max_y = self.position[1]
+            elif self.align == Align.LEFT_BOTTOM:
+                container_min_x = self.position[0]
+                container_max_y = self.position[1] + self.height
+            elif self.align == Align.RIGHT_BOTTOM:
+                container_min_x = self.position[0] - self.width
+                container_max_y = self.position[1] + self.height
+            elif self.align == Align.CENTER:
+                container_min_x = self.position[0] - self.width // 2
+                container_max_y = self.position[1] + self.height // 2
+
+
+            # 3. The text starts with the internal margin taken into account (pushed inwards)
+            current_character_x = container_min_x + padding_horizontal
+            self._start_y_pos = container_max_y
+
+
+            for char in self._current_text:
+                char_index = self.font.get_idx(char)
+                character_width = self.font.get_char_width(char)
+                chars.append((char_index, character_width, current_character_x))
+                current_character_x += character_width
+
+            if len(chars) > 0:
+                indices, widths, x_positions = zip(*chars)
+                self._current_length = len(indices)
+
+                self._np_indices[:self._current_length] = indices
+                self._np_widths[:self._current_length] = widths
+                self._np_x_positions[:self._current_length] = x_positions
+
+                self._char_indices.from_numpy(self._np_indices)
+                self._char_widths.from_numpy(self._np_widths)
+                self._char_x_positions.from_numpy(self._np_x_positions)
+
+                # 4. Save absolute background boundaries for the GPU kernel
+                self._total_start_x = container_min_x
+                self._total_end_x = container_min_x + self.width
+
+            self._last_text = self._current_text
+            self._last_pos = self.position
+            self._last_align = self.align
+        if getattr(self, '_current_length', 0) > 0:
+            # 5. Pass _start_y_pos WITHOUT subtracting padding, because it is already the exact top of the container
+            self._render_gpu(self._current_length, self._start_y_pos, self._total_start_x, self._total_end_x, self.get_style("border_radius"), scene.dynamic_ui_layer)
+
+
+    def __repr__(self):
+        return f"<DynamicText (text='{self._current_text}', position={self.position}, align={self.align})>"
+
+    # region Getters and setters [setters]
+    @property
+    def text(self):
+        return self._text
+    @text.setter
+    def text(self, value):
+        if not isinstance(value, str) and not callable(value):
+            _fatal_error(f"text must be a string or a callable that returns a string. Got {type(value).__name__}.", "TypeError")
+        if callable(value):
+            params = _count_function_parameters(value)  # Validate that it's a zero-argument function
+            if params != 0:
+                _fatal_error("text function must be a zero-argument function.", "ValueError")
+
+        self._text = value
+        self._current_text = self.text() if callable(self.text) else self.text
+    # endregion
 
 @ti.data_oriented
 class Grid(en.Renderable):
@@ -729,10 +1026,11 @@ class FontAtlas:
     """
 
 
-    def __init__(self, font_size=14):
-        self.chars = "0123456789-.,:+!?<>()*/%[]^° abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZąęółźżćśĄĘÓŁŹŻĆŚ"
+    def __init__(self, font_size=14, stroke_width=0):
+        self.chars = "0123456789-.,:+!?<>()*/%[]^° _abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZąęółźżćśĄĘÓŁŹŻĆŚ"
         self.font_size = font_size
-        self.char_height = int(font_size * 1.2)
+        self.char_height = int(font_size * 1.25 + stroke_width * 2)
+        self.stroke_width = stroke_width
 
         # Attempt to load preferred fonts, falling back to default if necessary
         try:
@@ -755,9 +1053,8 @@ class FontAtlas:
         for i, char in enumerate(self.chars):
             bbox = draw.textbbox((0, 0), char, font=font)
             w = bbox[2] - bbox[0]
-            h = bbox[3] - bbox[1]
 
-            w += 2
+            w += self.stroke_width * 2
             self.char_map_py[char] =\
             {
                 'index': i,
@@ -772,20 +1069,44 @@ class FontAtlas:
 
 
         self.atlas_res = (total_width, self.char_height)
-        img = Image.new('RGBA', self.atlas_res, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
+
+        img_stroke = Image.new('L', self.atlas_res, 0)
+        img_body = Image.new('L', self.atlas_res, 0)
+
+        draw_stroke = ImageDraw.Draw(img_stroke)
+        draw_body = ImageDraw.Draw(img_body)
 
         for char in self.chars:
             meta = self.char_map_py[char]
-            draw.text((meta['x'], 0), char, font=font, fill=(255, 255, 255, 255))
 
-        self.char_map = {c: i for i, c in enumerate(self.chars)}
+            if self.stroke_width > 0:
+                draw_stroke.text(
+                    (meta['x'], self.stroke_width),
+                    char,
+                    font=font,
+                    fill=255,
+                    stroke_width=self.stroke_width,
+                    stroke_fill=255
+                )
 
-        # Flip vertically because Taichi/OpenGL uses (0,0) at bottom-left
-        img = img.transpose(Image.FLIP_TOP_BOTTOM)
 
-        # Normalize pixel values to 0.0 - 1.0 range
-        image_np = np.array(img).astype(np.float32) / 255.0
+            draw_body.text(
+                (meta['x'], self.stroke_width),
+                char,
+                font=font,
+                fill=255
+            )
+
+        img_stroke = img_stroke.transpose(Image.FLIP_TOP_BOTTOM)
+        img_body = img_body.transpose(Image.FLIP_TOP_BOTTOM)
+
+        arr_stroke = np.array(img_stroke).astype(np.float32) / 255.0
+        arr_body = np.array(img_body).astype(np.float32) / 255.0
+
+        image_np = np.zeros((self.atlas_res[1], self.atlas_res[0], 4), dtype=np.float32)
+        image_np[..., 0] = arr_stroke    # R channel to mask of stroke
+        image_np[..., 1] = arr_body      # G channel to mask of body
+        image_np[..., 3] = 1.0
 
         # Swap axes from NumPy's (Height, Width, Channels) to Taichi's (Width, Height, Channels)
         image_np = image_np.transpose(1, 0, 2)
@@ -812,7 +1133,7 @@ class FontAtlas:
         self.char_to_idx = {c: i for i, c in enumerate(self.chars)}
 
 
-    def get_char_width(self, char):
+    def get_char_width(self, char: str) -> float:
         """
         Returns width of the char in pixels
         """
@@ -821,7 +1142,7 @@ class FontAtlas:
         return self.char_height * 0.5
 
 
-    def get_idx(self, char):
+    def get_idx(self, char: str) -> int:
         return self.char_to_idx.get(char, 0)
 
 
@@ -846,7 +1167,45 @@ class FontAtlas:
         w = float(self.texture.shape[0])
         h = float(self.texture.shape[1])
 
-        return self.texture[int(alias_x * w), int(alias_y * h)]
+        px = alias_x * w - 0.5
+        py = alias_y * h - 0.5
+
+        # 2. Calculate the coordinates of the 4 surrounding pixels for bilinear interpolation
+        x0 = ti.cast(ti.floor(px), ti.i32)
+        y0 = ti.cast(ti.floor(py), ti.i32)
+        x1 = x0 + 1
+        y1 = y0 + 1
+
+        # 3. Clamp the coordinates to ensure they are within the texture bounds
+        max_x = ti.cast(w - 1, ti.i32)
+        max_y = ti.cast(h - 1, ti.i32)
+
+        x0_safe = ti.max(0, ti.min(x0, max_x))
+        x1_safe = ti.max(0, ti.min(x1, max_x))
+        y0_safe = ti.max(0, ti.min(y0, max_y))
+        y1_safe = ti.max(0, ti.min(y1, max_y))
+
+        # 4. Calculate the fractional parts (interpolation weights)
+        # These tell us how close our "virtual" point px/py is to the edges
+        fx = px - float(x0)
+        fy = py - float(y0)
+
+        # 5. Sample the colors of the 4 surrounding pixels
+        c00 = self.texture[x0_safe, y0_safe]
+        c10 = self.texture[x1_safe, y0_safe]
+        c01 = self.texture[x0_safe, y1_safe]
+        c11 = self.texture[x1_safe, y1_safe]
+
+        # 6. Interpolate colors along the X axis (top and bottom separately)
+        c0 = c00 * (1.0 - fx) + c10 * fx
+        c1 = c01 * (1.0 - fx) + c11 * fx
+
+        final_color = c0 * (1.0 - fy) + c1 * fy
+
+        # 7. Apply the text color tint and return the final color with alpha
+        final_alpha = ti.math.smoothstep(0.3, 0.6, final_color.w)
+
+        return ti.Vector([final_color.x, final_color.y, final_color.z, final_alpha])
 
 
 @ti.data_oriented
@@ -1061,36 +1420,41 @@ class Axis(en.Renderable):
 
             # Downloading sign dimensions
             size = self._char_sizes[k]
-            cw = size.x
-            ch = size.y
+            char_width = size.x
+            char_height = size.y
 
             # Iterate over a small rectangle around a character (Bounding Box)
 
             # The range of pixels on the screen for this character
             start_x = int(base_pos.x)
             start_y = int(base_pos.y)
-            end_x = int(base_pos.x + cw)
-            end_y = int(base_pos.y + ch)
+            end_x = int(base_pos.x + char_width)
+            end_y = int(base_pos.y + char_height)
 
             for x in range(start_x, end_x):
                 for y in range(start_y, end_y):
                     if x >= 0 and x < target.shape[0] and y >= 0 and y < target.shape[1]: # A condition that checks whether we are not going off screen
-                        u = (x - base_pos.x) / cw
-                        v = (y - base_pos.y) / ch
+                        u = (x - base_pos.x) / char_width
+                        v = (y - base_pos.y) / char_height
 
                         tex_color = self.font.get_char_color(char_idx, u, v)
 
-                        if ti.static(self.cover_background): # removes 'if' after compilation
-                            src = tex_color * label_color
-                            target[x, y] = src
-                        else:
-                            if tex_color.w > 0.1:
-                                existing = target[x, y]
-                                src = tex_color * label_color
+                        stroke_mask = tex_color.x
+                        body_mask = tex_color.y
 
-                                out_a = src.w + existing.w * (1.0 - src.w)
-                                out_rgb = (src.xyz * src.w + existing.xyz * existing.w * (1.0 - src.w)) / ti.max(out_a, 1e-6)
-                                target[x, y] = ti.Vector([out_rgb.x, out_rgb.y, out_rgb.z, out_a])
+                        sharpened_alpha = ti.max(stroke_mask, body_mask)
+
+                        if ti.static(self.cover_background):
+                            target[x, y] = ti.Vector([label_color.x, label_color.y, label_color.z, sharpened_alpha * label_color.w])
+                        else:
+                            if sharpened_alpha > 0.05:
+                                existing_pixel = target[x, y]
+
+                                source_alpha = sharpened_alpha * label_color.w
+                                output_alpha = source_alpha + existing_pixel.w * (1.0 - source_alpha)
+                                output_rgb = (label_color.xyz * source_alpha + existing_pixel.xyz * existing_pixel.w * (1.0 - source_alpha)) / ti.max(output_alpha, 1e-6)
+
+                                target[x, y] = ti.Vector([output_rgb.x, output_rgb.y, output_rgb.z, output_alpha])
 
 
     def _render_arrows(self, target: ti.template(), cam: cr.CameraObj): # type: ignore
@@ -1107,7 +1471,7 @@ class Axis(en.Renderable):
         arrow_size = self.arrow_size
         arrow_color = self.arrow_color
 
-        # Strzałka X (Prawa)
+        # X Arrow (Right)
         if origin_y > 0 and origin_y < height:
             pos = ti.Vector([width - arrow_size * 0.4, origin_y])
             draw_rotated_image(
@@ -1119,7 +1483,7 @@ class Axis(en.Renderable):
                 arrow_color
             )
 
-        # Strzałka Y (Góra)
+        # Y Arrow (Top)
         if origin_x > 0 and origin_x < width:
             pos = ti.Vector([origin_x, height - arrow_size * 0.4])
             draw_rotated_image(
@@ -1251,14 +1615,13 @@ class Container(UIWidget):
 
     DEFAULT_STYLE = UIStyle(
         background_color=(1, 1, 1, 1),
-        # background_color=(0.118, 0.145, 0.322, 0.6),
         padding=(15, 15),
         border_radius=22,
     )
 
 
     def __init__(self,
-                 x_pos: int, y_pos: int,
+                 position: Sequence[int],
                  spacing: int = 15,
                  align: Align = Align.LEFT_TOP,
                  common_width: int = None,
@@ -1267,35 +1630,40 @@ class Container(UIWidget):
                  ):
         self.color_gpu = ti.Vector.field(4, dtype=float, shape=())
 
-        super().__init__(x_pos, y_pos, 1, 1, align, style)
+        super().__init__(position, 1, 1, align, style)
         self.elements = []
         self.spacing = spacing
         self.common_width = common_width
         self.common_height = common_height
+
+        # A temporary list to hold child elements added during the context manager block, before the container is fully initialized
+        self._pending_children = []
 
         self._is_dirty = True
 
     def add(self, *args):
         for element in args:
             setattr(element, '_parent', self)
+            if hasattr(element, '_init'):
+                element._init()
             self.elements.append(element)
 
 
     @ti.kernel
-    def _render_background(self, target_layer: ti.template(), border_radius: ti.i32): # type: ignore
+    def _render_background(self, x_pos: ti.i32, y_pos: ti.i32, target_layer: ti.template(), border_radius: ti.i32): # type: ignore
         color = self.color_gpu[None]
 
         half_w = float(self.width) / 2.0
         half_h = float(self.height) / 2.0
-        cx = float(self.x_pos) + half_w
-        cy = float(self.y_pos) - half_h
+        cx = float(x_pos) + half_w
+        cy = float(y_pos) - half_h
 
         r = ti.min(float(border_radius), ti.min(half_w, half_h))
 
-        x_min = self.x_pos
-        x_max = self.x_pos + self.width
-        y_min = self.y_pos - self.height
-        y_max = self.y_pos
+        x_min = x_pos
+        x_max = x_pos + self.width
+        y_min = y_pos - self.height
+        y_max = y_pos
 
         for i, j in ti.ndrange((x_min, x_max + 1), (y_min, y_max + 1)):
             if 0 <= i < target_layer.shape[0] and 0 <= j < target_layer.shape[1]:
@@ -1332,15 +1700,31 @@ class Container(UIWidget):
         if self.get_style("visible") and self._is_dirty:
             if self.get_style("background_color")[3] > 0:
                 self.color_gpu[None] = ti.Vector(self.get_style("background_color"))
-                self._render_background(scene.ui_layer, self.get_style("border_radius"))
+                self._render_background(int(self.position[0]), int(self.position[1]), scene.ui_layer, int(self.get_style("border_radius")))
                 self._is_dirty = False
 
         for element in self.elements:
             element.update(scene)
             element.render(scene)
 
-    def _init(self, scene):
+    def _init(self):
         self._update_layout()
+
+
+
+    def __enter__(self):
+        UIWidget._container_hierarchy_stack.append(self)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        UIWidget._container_hierarchy_stack.pop()
+
+        if self._pending_children:
+            self.add(*self._pending_children)
+            self._pending_children.clear()
+
+
+
 
 @ti.data_oriented
 class VBox(Container):
@@ -1354,13 +1738,10 @@ class VBox(Container):
     of the order in which nested containers and widgets are added.
     """
 
-    x_pos = NonNegativeInt()
-    y_pos = NonNegativeInt()
     spacing = NonNegativeInt()
-    align = EnumValidator(Align)
 
     def __init__(self,
-                 x_pos: int, y_pos: int,
+                 position: Sequence[int] = (20, 200),
                  spacing: int = 15,
                  align: Align = Align.LEFT_TOP,
                  common_width: int = None,
@@ -1369,8 +1750,7 @@ class VBox(Container):
                  ):
         """
         Args:
-            x_pos: The starting X coordinate (anchor point) of the container.
-            y_pos: The starting Y coordinate (anchor point) of the container.
+            position: The (x, y) coordinates for the container's anchor point.
             spacing: The number of pixels inserted vertically between each child element.
             align: The alignment method that objects in the container will inherit.
             common_width: Forces a uniform width for all DIRECT children (e.g., Buttons)
@@ -1388,7 +1768,7 @@ class VBox(Container):
             # [Inicialize the scene and coordinate system]
 
             # Define the container for the buttons
-            vertical_container = fr.VBox(30, 400, common_height=40, common_width=290)
+            vertical_container = fr.VBox((30, 400), common_height=40, common_width=290)
 
             # Create a function called by buttons
             def print_name(button):
@@ -1405,11 +1785,34 @@ class VBox(Container):
             # Add the container to the scene
             scene.add(vertical_container)
             ```
+
+            Creating a vertical set of three buttons using the context manager to automatically add buttons to the container:
+            ```python
+            import FluxRender as fr
+
+            # [Inicialize the scene and coordinate system]
+
+            # Define the container for the buttons
+            with fr.VBox((30, 400), common_height=40, common_width=290) as vertical_container:
+
+                # Create a function called by buttons
+                def print_name(button):
+                    print(f"Button pressed: {button.text}")
+
+                # Create buttons
+                button1 = fr.Button("Orange", print_name)
+                button2 = fr.Button("Blue", print_name)
+                button3 = fr.Button("Green", print_name)
+
+
+            # Add the container to the scene
+            scene.add(vertical_container)
+            ```
         """
 
-        super().__init__(x_pos, y_pos, spacing, align, common_width, common_height, style)
+        super().__init__(position, spacing, align, common_width, common_height, style)
 
-        self._current_y = y_pos
+        self._current_y = position[1]
 
 
     def _update_layout(self):
@@ -1418,8 +1821,8 @@ class VBox(Container):
         Executed once when the root container is added to the scene.
         """
 
-        current_x = self.x_pos + self.get_style("padding")[0]
-        current_y = self.y_pos - self.get_style("padding")[1]
+        current_x = self.position[0] + self.get_style("padding")[0]
+        current_y = self.position[1] - self.get_style("padding")[1]
         max_width = 0
 
         for element in self.elements:
@@ -1430,8 +1833,7 @@ class VBox(Container):
 
             setattr(element, 'align', self.align)
 
-            setattr(element, 'y_pos', current_y)
-            setattr(element, 'x_pos', current_x)
+            setattr(element, 'position', (current_x, current_y))
 
             # If the element is a container, we need to update its layout before we can get its dimensions
             if isinstance(element, Container):
@@ -1444,11 +1846,11 @@ class VBox(Container):
             max_width = max(max_width, el_width)
 
             self.width = max_width + self.get_style("padding")[0] * 2
-            self.height = max(0, self.y_pos - current_y - self.spacing) + self.get_style("padding")[1]
+            self.height = max(0, int(self.position[1] - current_y - self.spacing)) + self.get_style("padding")[1]
 
 
     def __repr__(self):
-        return f"<VBox (x_pos={self.x_pos} y_pos={self.y_pos} spacing={self.spacing})>"
+        return f"<VBox (position={self.position} spacing={self.spacing})>"
 
 @ti.data_oriented
 class HBox(Container):
@@ -1461,13 +1863,10 @@ class HBox(Container):
     nested UI structures.
     """
 
-    x_pos = NonNegativeInt()
-    y_pos = NonNegativeInt()
     spacing = NonNegativeInt()
-    align = EnumValidator(Align)
 
     def __init__(self,
-                 x_pos: int, y_pos: int,
+                 position: Sequence[int] = (20, 100),
                  spacing: int = 15,
                  align: Align = Align.LEFT_TOP,
                  common_width: int = None,
@@ -1476,8 +1875,12 @@ class HBox(Container):
                  ):
         """
         Args:
-            x_pos: The starting X coordinate (anchor point) of the container.
-            y_pos: The starting Y coordinate (anchor point) of the container.
+            position: The (x, y) coordinates for the container's anchor point.
+            spacing: The number of pixels inserted horizontally between each child element.
+            align: The alignment method that objects in the container will inherit.
+            common_width: Forces a uniform width for all DIRECT children (e.g., Buttons)
+                added to this specific container. Does not affect deeply nested elements.
+            common_height: Forces a uniform height for all DIRECT children added to this
             spacing: The number of pixels inserted horizontally between each child element.
             align: The alignment method that objects in the container will inherit.
             common_width: Forces a uniform width for all DIRECT children (e.g., Buttons)
@@ -1495,7 +1898,7 @@ class HBox(Container):
             # [Inicialize the scene and coordinate system]
 
             # Define the container for the buttons
-            horizontal_container = fr.HBox(10, 80, common_height=40, common_width=290)
+            horizontal_container = fr.HBox((10, 80), common_height=40, common_width=290)
 
             # Create a function called by buttons
             def print_name(button):
@@ -1512,11 +1915,33 @@ class HBox(Container):
             # Add the container to the scene
             scene.add(horizontal_container)
             ```
+
+            Creating a horizontal set of three buttons using the context manager to automatically add buttons to the container:
+            ```python
+            import FluxRender as fr
+
+            # [Inicialize the scene and coordinate system]
+
+            # Define the container for the buttons
+            with fr.HBox((10, 80), common_height=40, common_width=290) as horizontal_container:
+
+                # Create a function called by buttons
+                def print_name(button):
+                    print(f"Button pressed: {button.text}")
+
+                # Create buttons
+                button1 = fr.Button("Orange", print_name)
+                button2 = fr.Button("Blue", print_name)
+                button3 = fr.Button("Green", print_name)
+
+            # Add the container to the scene
+            scene.add(horizontal_container)
+            ```
         """
 
-        super().__init__(x_pos, y_pos, spacing, align, common_width, common_height, style)
+        super().__init__(position, spacing, align, common_width, common_height, style)
 
-        self._current_x = x_pos
+        self._current_x = position[0]
 
     def _update_layout(self):
         """
@@ -1524,8 +1949,8 @@ class HBox(Container):
         Executed once when the root container is added to the scene.
         """
 
-        current_x = self.x_pos + self.get_style("padding")[0]
-        current_y = self.y_pos - self.get_style("padding")[1]
+        current_x = self.position[0] + self.get_style("padding")[0]
+        current_y = self.position[1] - self.get_style("padding")[1]
         max_height = 0
 
         for element in self.elements:
@@ -1536,8 +1961,7 @@ class HBox(Container):
 
             setattr(element, 'align', self.align)
 
-            setattr(element, 'y_pos', current_y)
-            setattr(element, 'x_pos', current_x)
+            setattr(element, 'position', (current_x, current_y))
 
             # If the element is a container, we need to update its layout before we can get its dimensions
             if isinstance(element, Container):
@@ -1549,11 +1973,11 @@ class HBox(Container):
             current_x += el_width + self.spacing
             max_height = max(max_height, el_height)
 
-            self.width = max(0, current_x - self.x_pos - self.spacing) + self.get_style("padding")[0]
+            self.width = max(0, int(current_x - self.position[0] - self.spacing)) + self.get_style("padding")[0]
             self.height = max_height + self.get_style("padding")[1] * 2
 
     def __repr__(self):
-        return f"<HBox (x_pos={self.x_pos} y_pos={self.y_pos} spacing={self.spacing})>"
+        return f"<HBox (position={self.position} spacing={self.spacing})>"
 
 
 
@@ -1624,7 +2048,7 @@ def create_mode_switch(scene: cr.Scene, vector_field: en.VectorField, add_to_sce
     btn = Button(
         text=mode_mapping.get(vector_field.mode, "Unknown Mode"),
         on_click=toggle_mode,
-        x_pos=10, y_pos=scene.height - 10,
+        position=(10, scene.height - 10),
         width=230,
         height=35,
         style=UIStyle(
@@ -1758,7 +2182,7 @@ def create_property_switch(scene: cr.Scene, *target_entities, add_to_scene: bool
         generated_buttons.append(new_button)
 
     container = VBox(
-        x_pos=10, y_pos=scene.height - 10,
+        position=(10, scene.height - 10),
         spacing=12,
         common_width=230,
         common_height=35,
@@ -1842,7 +2266,7 @@ def create_color_scale_switch(scene: cr.Scene, mapper: en.ColorMapper, add_to_sc
     btn = Button(
         text=initial_text,
         on_click=toggle_scale,
-        x_pos=10, y_pos=scene.height - 10, # Offset above the previous switch
+        position=(10, scene.height - 10),
         width=230,
         height=35,
         style=UIStyle(font_size=16)
@@ -1852,6 +2276,83 @@ def create_color_scale_switch(scene: cr.Scene, mapper: en.ColorMapper, add_to_sc
         scene.add(btn)
     return btn
 
+def create_cursor_probe_display(scene: cr.Scene,
+                                vector_function: Callable | me.VectorMathEngine,
+                                target_property: en.Property | None = None,
+                                display_position: Sequence[int] = (20, 100),
+                                add_to_scene: bool = True
+                                ) -> Tuple[rg.CursorRegion, pr.DataProbe, DynamicText]:
+    """
+    The text widget automatically updates every frame, displaying the value of the requested
+    mathematical property at the current mouse position.
+
+    Creates a complete, linked data inspection tool consisting of a cursor tracking region,
+    a mathematical data probe, and a dynamic user interface text display.
+
+    Args:
+        scene (Scene): The main scene to which the elements will be attached.
+        vector_function (Callable | VectorMathEngine): The mathematical function or math engine used for calculations.
+        target_property (Property | None): The specific vector field property to measure (e.g., DIVERGENCE). If None, the current value of the vector field will be displayed. Default is None.
+        display_position (Sequence[int]): The screen coordinates (x, y) where the UI text will be anchored.
+        add_to_scene (bool): Whether to automatically add the created elements to the scene. Set to False if you want to manage their addition manually.
+
+    Returns:
+        cursor_tracking_region (CursorRegion): The cursor tracking region.
+        data_probe (DataProbe): The data probe.
+        dynamic_text_display (DynamicText): The dynamic text display.
+
+    Example:
+        ```python
+        import FluxRender as fr
+        import numpy as np
+
+        scene = fr.create_workspace()
+
+        def swirling_vortex(x, y):
+            vector_dx = np.sin(y) * x
+            vector_dy = np.cos(x) * y
+            return vector_dx, vector_dy
+
+        color_mapper = fr.ColorMapper()
+        vector_field = fr.VectorField(swirling_vortex, color_mapper=color_mapper)
+
+        # Create dynamic text that displays the current value of a vector function under the cursor
+        fr.create_cursor_probe_display(scene, swirling_vortex)
+
+        scene.add(vector_field)
+        scene.run()
+        ```
+    """
+
+    if callable(vector_function):
+        vector_function = me.VectorMathEngine(scene, vector_function)
+
+    # Initialize the interactive region tracking the mouse cursor
+    cursor_tracking_region = rg.CursorRegion(always_active=True)
+
+    data_probe = pr.DataProbe(cursor_tracking_region, vector_function, target_property)
+
+    def text_provider_function() -> str:
+        current_mathematical_value = data_probe.value
+
+        # Format the output string gracefully depending on whether the result is a scalar or a vector
+        if target_property is not None:
+            formatted_name = target_property.name.replace("_", " ").title()
+
+        if isinstance(current_mathematical_value, (tuple, list)) or hasattr(current_mathematical_value, '__iter__'):
+            return f"Value: ({current_mathematical_value[0]:.3f}, {current_mathematical_value[1]:.3f})"
+        else:
+            return f"{formatted_name}: {current_mathematical_value:.3f}"
+
+    dynamic_text_display = DynamicText(
+        position=display_position,
+        text=text_provider_function,
+    )
+
+    if add_to_scene:
+        scene.add(cursor_tracking_region, data_probe, dynamic_text_display)
+
+    return cursor_tracking_region, data_probe, dynamic_text_display
 
 
 

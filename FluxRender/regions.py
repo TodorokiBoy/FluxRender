@@ -351,7 +351,7 @@ class CursorRegion(SpatialRegion):
 
             probe = fr.DataProbe(
                 target_region=probing_cursor,
-                math_engine=math_engine,
+                target_entity=math_engine,
                 measured_property=fr.Property.VELOCITY
             )
             probe.add_listener(lambda value: print(f"Current velocity at cursor: {value}", end="\\r"))

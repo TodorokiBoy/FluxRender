@@ -7,7 +7,7 @@ import os
 import atexit
 
 from .colors import ColorSequence
-from .validators import _fatal_error, PositiveInt, StrictBool, StrictString, NumberRange
+from .validators import _fatal_error, PositiveInt, StrictBool, StrictString, NumberRange, _count_function_parameters
 
 # region initial settings [blue]
 
@@ -120,6 +120,7 @@ class CoordinateSystem:
     remain circular).
 
     Attributes:
+        resolution (tuple): The screen resolution as (width, height) in pixels.
         width (int): Screen width in pixels.
         height (int): Screen height in pixels.
         x_min (float): The actual lower bound of the mathematical X axis.
@@ -135,7 +136,7 @@ class CoordinateSystem:
     keep_aspect_ratio = StrictBool()
 
 
-    def __init__(self, x_range: tuple, y_range: tuple, width: int, height: int, keep_aspect_ratio: bool = False):
+    def __init__(self, x_range: tuple = (-8, 8), y_range: tuple = (-8, 8), resolution: tuple = (1200, 800), keep_aspect_ratio: bool = False):
         """
         Initializes the coordinate system with specific bounds and screen dimensions.
 
@@ -147,8 +148,7 @@ class CoordinateSystem:
         Args:
             x_range (tuple[float, float]): The desired (min, max) values for the X axis.
             y_range (tuple[float, float]): The desired (min, max) values for the Y axis.
-            width (int): Window/buffer width in pixels.
-            height (int): Window/buffer height in pixels.
+            resolution (tuple[int, int], optional): The screen resolution as (width, height) in pixels. Defaults to (1200, 800).
             keep_aspect_ratio (bool, optional): If True, adjusts x_range or y_range
                 to preserve 1:1 scaling (square pixels). Defaults to False.
 
@@ -156,18 +156,19 @@ class CoordinateSystem:
         Example:
             To create a coordinate system that maps the mathematical range of -2 to 2 on both axes to a screen resolution of 1800x950 pixels without keeping the aspect ratio:
             ```python
-            coords = CoordinateSystem((-2, 2), (-2, 2), 1800, 950, keep_aspect_ratio=False)
+            coords = CoordinateSystem((-2, 2), (-2, 2), (1800, 950), keep_aspect_ratio=False)
             ```
 
             To create the same coordinate system but with aspect ratio correction (ensuring circles look like circles):
             ```python
-            coords = CoordinateSystem((-2, 2), (-2, 2), 1800, 950, keep_aspect_ratio=True)
+            coords = CoordinateSystem((-2, 2), (-2, 2), (1800, 950), keep_aspect_ratio=True)
             ```
             Then, in the above case, the ranges on the X and Y axis will be adjusted accordingly to maintain the aspect ratio.
         """
 
-        self.width = width
-        self.height = height
+        self.resolution = resolution
+        self.width = resolution[0]
+        self.height = resolution[1]
 
         self.math_width = x_range[1] - x_range[0]
         self.math_height = y_range[1] - y_range[0]
@@ -175,7 +176,7 @@ class CoordinateSystem:
         y_center = (y_range[0] + y_range[1]) / 2.0
 
         if keep_aspect_ratio:
-            screen_ratio = width / height
+            screen_ratio = self.width / self.height
             data_ratio = self.math_width / self.math_height
 
             if screen_ratio < data_ratio:
@@ -416,7 +417,7 @@ class Scene:
             ```python
             import FluxRender as fr
 
-            coords = fr.CoordinateSystem((-10, 10), (-10, 10), 1200, 800, keep_aspect_ratio=True)
+            coords = fr.CoordinateSystem(x_range=(-10, 10), y_range=(-10, 10), resolution=(1200, 800), keep_aspect_ratio=True)
 
             scene = fr.Scene(
                 "My Simulation",
@@ -445,6 +446,7 @@ class Scene:
         self.scene_layer = ti.Vector.field(4, dtype=float, shape=(self.width, self.height))
         self.ui_layer = ti.Vector.field(4, dtype=float, shape=(self.width, self.height))
         self.ui_layer.fill(0)
+        self.dynamic_ui_layer = ti.Vector.field(4, dtype=float, shape=(self.width, self.height))
         self.pixels = ti.Vector.field(3, dtype=float, shape=(self.width, self.height))
 
         self.zoom_speed = 0.02
@@ -452,6 +454,7 @@ class Scene:
         self._use_trails = False
 
         self.objects = []
+        self.functions = []
 
         self.time = 0.0
         self.dt = 0.005
@@ -498,6 +501,7 @@ class Scene:
             self._fade_trails(self.trail_fade_factor)
 
             self.scene_layer.fill(0) # Completely clear scene_layer
+            self.dynamic_ui_layer.fill(0) # Clear dynamic UI layer
 
             # Handling user interactions (e.g., mouse clicks)
             mx, my = window.get_cursor_pos()
@@ -530,6 +534,9 @@ class Scene:
                 obj.render(self)
                 obj.update(self)
 
+            # Execute all registered callable functions
+            for func in self.functions:
+                func()
 
             # User update() function executed every frame
             if user_update_func:
@@ -555,6 +562,7 @@ class Scene:
             trail = self.trail_layer[i, j]
             overlay = self.scene_layer[i, j]
             ui = self.ui_layer[i, j]
+            dynamic_ui = self.dynamic_ui_layer[i, j]
 
             # background + trail_layer
             color_step1 = trail.xyz * trail.w + self._background_color_ti * (1.0 - trail.w)
@@ -563,7 +571,10 @@ class Scene:
             color_step2 = overlay.xyz * overlay.w + color_step1 * (1.0 - overlay.w)
 
             # color_step2 + ui_layer
-            final_rgb = ui.xyz * ui.w + color_step2 * (1.0 - ui.w)
+            color_step3 = ui.xyz * ui.w + color_step2 * (1.0 - ui.w)
+
+            # color_step3 + dynamic_ui_layer
+            final_rgb = dynamic_ui.xyz * dynamic_ui.w + color_step3 * (1.0 - dynamic_ui.w)
 
             self.pixels[i, j] = final_rgb
 
@@ -601,7 +612,27 @@ class Scene:
             self.objects.append(new_object)
             self._process_addition(new_object)
             if hasattr(new_object, '_init'):
-                new_object._init(self)
+                num_of_parameters = _count_function_parameters(new_object._init)
+                if num_of_parameters == 1:
+                    new_object._init(self)
+                elif num_of_parameters == 0:
+                    new_object._init()
+
+    def add_callable(self, func):
+        """
+        Adds a callable function to be executed every frame.
+
+        The function must be a callable object (e.g., a function or a lambda).
+        It will be called on every frame update, just before the rendering phase.
+
+        Args:
+            func (Callable): A callable object to be executed every frame. It can be used for custom animations, state updates, or any logic that needs to run continuously.
+        """
+
+        if not callable(func):
+            _fatal_error("The provided object must be callable (e.g., a function or a lambda).", "TypeError")
+
+        self.functions.append(func)
 
     def _process_addition(self, entity):
         """

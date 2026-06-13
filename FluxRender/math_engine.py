@@ -376,7 +376,7 @@ class VectorMathEngine(MathEngine):
                 spatial_coordinate_y,
             )
 
-    def evaluate_field_and_property(self, property_type: Property, spatial_coordinate_x: float, spatial_coordinate_y: float) -> tuple:
+    def evaluate_field_and_property(self, property_type: Property | None, spatial_coordinate_x: float, spatial_coordinate_y: float) -> tuple:
         """
         Evaluates the primary vector function and the specified property at the given spatial coordinates.
 
@@ -384,7 +384,7 @@ class VectorMathEngine(MathEngine):
         a scalar value given by property_type (e.g. divergence, rotation, velocity).
 
         Args:
-            property_type (Property): The specific property to calculate based on the evaluated vector field. If set to None, the method will only evaluate the primary vector function and bypass any property calculations for maximum performance when only vector components are needed.
+            property_type (Property | None): The specific property to calculate based on the evaluated vector field. If set to None, the method will only evaluate the primary vector function and bypass any property calculations for maximum performance when only vector components are needed.
             spatial_coordinate_x (float / ndarray): The x-coordinate(s) in the mathematical world space.
             spatial_coordinate_y (float / ndarray): The y-coordinate(s) in the mathematical world space.
 
@@ -498,7 +498,12 @@ class VectorMathEngine(MathEngine):
             magnitudes = np.hypot(vec_dx, vec_dy) * np.hypot(base_vec_dx, base_vec_dy)
 
 
-        magnitudes[magnitudes == 0] = 1.0
+        if isinstance(magnitudes, np.ndarray):
+            magnitudes[magnitudes == 0] = 1.0
+        else:
+            if magnitudes == 0:
+                magnitudes = 1.0
+
         angles = np.arccos(np.clip(dot_products / magnitudes, -1.0, 1.0)) # Angle in radians between the vector and the base angle vector
 
         return angles

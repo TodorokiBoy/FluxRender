@@ -25,6 +25,8 @@ def _fatal_error(error_message: str, error_type: str = "TypeError"):
                       "colors.py",
                       }
 
+    # raise RuntimeError(f"[FluxRender {error_type}] {error_message}") #* for debugging purposes, to see the full traceback. Remove or comment out this line in production.
+
     while current_frame:
         current_filename = current_frame.f_code.co_filename
 
@@ -180,6 +182,35 @@ class CoordinateSequence:
 
         if hasattr(obj, '_flag_for_update'):
             obj._flag_for_update(self.private_name[1:])
+
+class IntCoordinateSequence:
+    def __set_name__(self, owner, name):
+        self.private_name = '_' + name
+
+    def __get__(self, obj, objtype=None):
+        return getattr(obj, self.private_name)
+
+    def __set__(self, obj, value):
+        try:
+            lenght = len(value)
+        except TypeError:
+            _fatal_error(f"Parameter '{self.private_name[1:]}' must be a sequence (e.g., tuple, list). Got {type(value).__name__}.", "TypeError")
+
+        if lenght != 2:
+            _fatal_error(f"Parameter '{self.private_name[1:]}' must have exactly 2 components (x, y). Got {lenght} components.", "ValueError")
+
+        try:
+            ints = [int(c) for c in value]
+        except (ValueError, TypeError):
+            _fatal_error(f"All coordinate components of '{self.private_name[1:]}' must be integers. Got {value}.", "TypeError")
+
+
+
+        setattr(obj, self.private_name, tuple(ints))
+
+        if hasattr(obj, '_flag_for_update'):
+            obj._flag_for_update(self.private_name[1:])
+
 
 class StrictBool:
     """Descriptor that ensures an attribute is strictly a boolean type."""

@@ -1,7 +1,12 @@
 import FluxRender.core as cr
 import FluxRender.entities as en
 import FluxRender.ui as ui
-from typing import Callable, Tuple
+import FluxRender.regions as rg
+import FluxRender.probes as pr
+import FluxRender.math_engine as me
+import FluxRender.constants as ct
+
+from typing import Sequence, Callable, Tuple
 
 
 def create_workspace(
@@ -52,8 +57,7 @@ def create_workspace(
     coordinate_system = fr.CoordinateSystem(
         x_range=x_range,
         y_range=y_range,
-        width=resolution[0],
-        height=resolution[1],
+        resolution=resolution,
         keep_aspect_ratio=True
     )
 
@@ -107,6 +111,7 @@ def quick_simulate(
 
     import FluxRender as fr
 
+    # region 1. Engine & Entities Setup
     workspace = fr.create_workspace(resolution)
 
     math_engine = fr.VectorMathEngine(workspace, vec_function)
@@ -115,24 +120,183 @@ def quick_simulate(
     vector_field = fr.VectorField(math_engine, color_mapper=color_mapper)
     particles = fr.ParticleSystem(math_engine, color_mapper=color_mapper)
 
-    property_switch = fr.create_property_switch(workspace, vector_field, particles, add_to_scene=False)
+    target_entities = [vector_field, particles]
+    # endregion
+
+    # region 2. Data Probes
+    # Initialize the interactive region tracking the mouse cursor
+    cursor_tracking_region = rg.CursorRegion(always_active=True)
+
+    # Probe for the currently selected scalar property (e.g., Divergence, Curl).
+    # We initialize it with the current property of the vector field.
+    data_probe_property = pr.DataProbe(cursor_tracking_region, math_engine, vector_field.color_property)
+
+    # Probe for the raw mathematical vector value from the math engine
+    data_probe_vector = pr.DataProbe(cursor_tracking_region, math_engine, None)
+    # endregion
+
+    # region 3. Property Switch Construction
+    property_mapping = [
+        ("Component X", ct.Property.COMPONENT_X),
+        ("Component Y", ct.Property.COMPONENT_Y),
+        ("Velocity", ct.Property.VELOCITY),
+        ("Angle", ct.Property.ANGLE),
+        ("Divergence", ct.Property.DIVERGENCE),
+        ("Curl", ct.Property.CURL),
+        ("Jacobian", ct.Property.JACOBIAN),
+        ("Okubo-Weiss", ct.Property.OKUBO_WEISS),
+        ("Convective Acceleration", ct.Property.CONVECTIVE_ACCELERATION),
+    ]
+
+    # UI Styles for the property buttons
+    active_style = ui.UIStyle(
+        background_color=(0.027, 0.212, 0.439, 0.878),
+        hover_background_color=(0.027, 0.212, 0.439, 0.878)
+    )
+    inactive_style = ui.UIStyle(
+        background_color=(0.0, 0.5, 1.0, 0.45),
+        hover_background_color=(0.0, 0.6, 1.0, 0.55),
+    )
+
+    # Internal callback for handling state changes
+    def toggle_property(clicked_button):
+        # Update the visual representation in entities
+        for entity in target_entities:
+            setattr(entity, 'color_property', clicked_button.property)
+
+        # Update the mathematical probe target
+        data_probe_property.measured_property = clicked_button.property
+
+        # Update button visual states
+        for current_button in generated_buttons:
+            is_custom = (current_button.property == ct.Property.CUSTOM)
+            if current_button == clicked_button:
+                current_button.style = active_style
+            else:
+                current_button.style = inactive_style
+
+    generated_buttons = []
+
+    # Dynamically generate buttons based on the mapping
+    for label_text, target_property in property_mapping:
+        is_active = all(getattr(entity, 'color_property', None) == target_property for entity in target_entities)
+
+        initial_style = inactive_style
+        if is_active:
+            initial_style = active_style
+
+        new_button = ui.Button(label_text, toggle_property, style=initial_style)
+        new_button.property = target_property
+        generated_buttons.append(new_button)
+
+    property_switch_container = ui.VBox(
+        spacing=12,
+        common_width=230,
+        common_height=35,
+        style=ui.UIStyle(font_size=16, padding=(12, 12))
+    )
+    property_switch_container.add(*generated_buttons)
+    # endregion
+
+    # region 4. Additional UI Switches (Scale & Mode)
     color_scale_switch = fr.create_color_scale_switch(workspace, color_mapper, add_to_scene=False)
     mode_switch = fr.create_mode_switch(workspace, vector_field, add_to_scene=False)
 
-    switch_container = fr.VBox(0, 0, style=fr.UIStyle(padding=(12, 12)), spacing=12)
-    switch_container.add(color_scale_switch, mode_switch)
-
-    main_container_style = fr.UIStyle(
-        visible=False,
-        padding=(0, 0)
+    scale_mode_container = fr.VBox(
+        style=fr.UIStyle(padding=(12, 12)),
+        spacing=12,
+        common_width=230,
     )
-    main_container = fr.VBox(10, workspace.height - 10, style=main_container_style)
-    main_container.add(property_switch, switch_container)
+    scale_mode_container.add(color_scale_switch, mode_switch)
+    # endregion
 
-    workspace.add(particles, vector_field, main_container)
+    # region 5. Dynamic Text Displays
+    def text_property_provider() -> str:
+        current_value = data_probe_property.value
+        # Convert Enum name to a readable format (e.g., "CONVECTIVE_ACCELERATION" -> "Convective Acceleration")
+        formatted_name = data_probe_property.measured_property.name.replace("_", " ").title()
+        return f"{formatted_name}: {current_value:.3f}"
+
+    dynamic_text_property = ui.DynamicText(
+        text=text_property_provider,
+        width=230,
+    )
+
+    def text_vector_provider() -> str:
+        current_value = data_probe_vector.value
+        return f"Vector: ({current_value[0]:.3f}, {current_value[1]:.3f})"
+
+    dynamic_text_vector = ui.DynamicText(
+        text=text_vector_provider,
+        width=230,
+    )
+
+    informations_container = fr.VBox(
+        style=fr.UIStyle(font_size=14, padding=(12, 12)),
+        spacing=12
+    )
+    informations_container.add(dynamic_text_vector, dynamic_text_property)
+    # endregion
+
+    # region 6. Main Layout Assembly
+    # Transparent wrapper linking all panels together vertically
+    main_container_style = fr.UIStyle(visible=False, padding=(0, 0))
+
+    main_wrapper = fr.VBox(
+        position=(10, workspace.height - 10),
+        style=main_container_style,
+        spacing=15
+    )
+    main_wrapper.add(property_switch_container, scale_mode_container, informations_container)
+
+    # Inject all components into the rendering pipeline
+    workspace.add(
+        particles,
+        vector_field,
+        main_wrapper,
+        cursor_tracking_region,
+        data_probe_property,
+        data_probe_vector
+    )
+    # endregion
+
     workspace.run()
 
     return workspace
+
+
+
+def as_vector_field(**field_configuration_parameters):
+    """
+    A mathematical decorator that automatically converts a standard Python function
+    into a fully initialized VectorField entity.
+
+    It accepts any number of keyword arguments that the underlying VectorField
+    constructor supports, passing them directly to the instance.
+
+    Example:
+        ```python
+        import FluxRender as fr
+        import numpy as np
+
+        scene = fr.create_workspace()
+
+        @fr.as_vector_field(color_property=fr.Property.CURL)
+        def vector_function(x, y):
+            return np.sin(x) * y, np.cos(y) * x
+
+        scene.add(vector_function)
+        scene.run()
+        ```
+    """
+
+    def wrapper(vec_function: Callable):
+        vector_field = en.VectorField(vec_function, **field_configuration_parameters)
+        return vector_field
+
+    return wrapper
+
+
 
 
 
