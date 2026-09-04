@@ -4,7 +4,7 @@ from .validators import _count_function_parameters, _fatal_error
 from . import math_engine as me
 from . import entities as en
 
-class DataProbe:
+class DataProbe(en.Renderable):
     """A measurement instrument that tracks a spatial target and evaluates mathematical properties.
 
     The DataProbe acts as an observer within the simulation. It continuously monitors a specified
@@ -41,7 +41,7 @@ class DataProbe:
 
             # [Initialization of scene and coordinate system]
 
-            math_engine = fr.VectorMathEngine(scene=scene, primary_vector_function=lambda x, y: (y, -x))
+            math_engine = fr.VectorMathEngine(primary_vector_function=lambda x, y: (y, -x))
             interactive_cursor = fr.CursorRegion(radius=30) # A source of coordinates that moves with user input
 
             # Define a function that will be called by DataProbe on each frame (if the region is active)
@@ -81,11 +81,11 @@ class DataProbe:
             text = fr.DynamicText(text=lambda: f"Velocity: {probe.value}",)
 
 
-            scene.add(vector_field,cursor, probe, text)
             scene.run()
             ```
         """
 
+        super().__init__()
         self.target_region = target_region
         self.math_engine = target_entity
         self.measured_property = measured_property

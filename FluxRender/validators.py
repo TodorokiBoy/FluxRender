@@ -23,6 +23,7 @@ def _fatal_error(error_message: str, error_type: str = "TypeError"):
                       "constants.py",
                       "graphics.py",
                       "colors.py",
+                      "physics.py",
                       }
 
     # raise RuntimeError(f"[FluxRender {error_type}] {error_message}") #* for debugging purposes, to see the full traceback. Remove or comment out this line in production.
@@ -295,6 +296,37 @@ class EnumValidator:
         if hasattr(obj, '_flag_for_update'):
             obj._flag_for_update(self.private_name[1:])
 
+class ClassValidator:
+    """
+    Descriptor ensuring the assigned value is an instance of a specific class or its subclasses.
+    Integrates seamlessly with the reactive update cycle.
+    """
+
+    def __init__(self, target_class, accept_none=False):
+        if not isinstance(target_class, type):
+            _fatal_error(f"The target_class must be a valid class type.", "TypeError")
+        self.target_class = target_class
+        self.accept_none = accept_none
+
+    def __set_name__(self, owner, name):
+        self.private_name = '_' + name
+
+    def __get__(self, obj, objtype=None):
+        return getattr(obj, self.private_name)
+
+    def __set__(self, obj, value):
+        if not self.accept_none and value is None:
+            _fatal_error(f"None is not an acceptable value for '{self.private_name[1:]}'. Expected an instance of {self.target_class.__name__} or its subclasses.", "ValueError")
+
+        if not isinstance(value, (self.target_class, type(None))):
+            _fatal_error(f"Invalid value for '{self.private_name[1:]}'. Expected an instance of {self.target_class.__name__} or its subclasses. Got {type(value).__name__}.", "TypeError")
+
+
+        setattr(obj, self.private_name, value)
+
+        if hasattr(obj, '_flag_for_update'):
+            obj._flag_for_update(self.private_name[1:])
+
 class ClipingPercentiles:
     """Descriptor that ensures a tuple of two numbers representing clipping percentiles is valid."""
 
@@ -393,8 +425,70 @@ class NumberRange:
             obj._flag_for_update(self.private_name[1:])
 
 
+class SequenceRange:
+    """Descriptor that ensures an attribute is a numerical range."""
 
+    def __init__(self):
+        pass
 
+    def __set_name__(self, owner, name):
+        self.private_name = '_' + name
+
+    def __get__(self, obj, objtype=None):
+        return getattr(obj, self.private_name)
+
+    def __set__(self, obj, value):
+        try:
+            length = len(value)
+        except TypeError:
+            _fatal_error(f"{self.private_name[1:]} must be a sequence (e.g., tuple, list). Got {type(value).__name__}.", "TypeError")
+
+        if length != 2:
+            _fatal_error(f"{self.private_name[1:]} must contain exactly two elements. Got {length}.", "ValueError")
+
+        try:
+            floats = [float(c) for c in value]
+        except (ValueError, TypeError):
+            _fatal_error(f"{self.private_name[1:]} must contain numeric values. Got {value}.", "TypeError")
+
+        if floats[0] >= floats[1]:
+            _fatal_error(f"The first value in {self.private_name[1:]} must be less than the second value. Got {value}.", "ValueError")
+
+        setattr(obj, self.private_name, tuple(floats))
+
+        if hasattr(obj, '_flag_for_update'):
+            obj._flag_for_update(self.private_name[1:])
+
+class ResolutionValidator:
+    """Descriptor that ensures an attribute is a valid resolution tuple (width, height)."""
+
+    def __set_name__(self, owner, name):
+        self.private_name = '_' + name
+
+    def __get__(self, obj, objtype=None):
+        return getattr(obj, self.private_name)
+
+    def __set__(self, obj, value):
+        try:
+            length = len(value)
+        except TypeError:
+            _fatal_error(f"{self.private_name[1:]} must be a sequence (e.g., tuple, list). Got {type(value).__name__}.", "TypeError")
+
+        if length != 2:
+            _fatal_error(f"{self.private_name[1:]} must contain exactly two elements (width, height). Got {length}.", "ValueError")
+
+        try:
+            ints = [int(c) for c in value]
+        except (ValueError, TypeError):
+            _fatal_error(f"{self.private_name[1:]} must contain integer values. Got {value}.", "TypeError")
+
+        if any(c <= 0 for c in ints):
+            _fatal_error(f"Both width and height in {self.private_name[1:]} must be positive integers. Got {value}.", "ValueError")
+
+        setattr(obj, self.private_name, tuple(ints))
+
+        if hasattr(obj, '_flag_for_update'):
+            obj._flag_for_update(self.private_name[1:])
 
 
 

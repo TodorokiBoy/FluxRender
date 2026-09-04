@@ -1,5 +1,6 @@
 from enum import Enum, IntEnum, auto
 
+
 class Align(Enum):
     """Specifies the anchoring or alignment behavior for UI elements and spatial bounding boxes.
 
@@ -101,5 +102,60 @@ class FieldMode(IntEnum):
     ZOOM_ADAPTIVE = 2
     WORLD_DENSITY_ADAPTIVE = 3
     ZOOM_DENSITY_ADAPTIVE = 4
+
+
+
+class BoundaryType(Enum):
+    """
+    Defines the physical behavior of a fluid domain boundary.
+
+    Attributes:
+        SOLID_WALL: The fluid cannot pass through this boundary; it reflects off.
+        OPEN_OUTFLOW: The fluid can exit freely.
+        INFLOW: The fluid enters the domain with a specified velocity.
+        PERIODIC: The fluid exiting one side re-enters from the opposite side.
+    """
+
+    SOLID_WALL = 0
+    OPEN_OUTFLOW = 1
+    INFLOW = 2
+    PERIODIC = 3
+
+class EmissionEdge(Enum):
+    """
+    Specifies the edge of a rectangular domain from which smoke is emitted.
+
+    Attributes:
+        LEFT: Fluid is emitted from the left edge.
+        RIGHT: Fluid is emitted from the right edge.
+    """
+
+    LEFT = 0
+    RIGHT = 1
+    TOP = 2
+    BOTTOM = 3
+
+class SmokePattern(Enum):
+    """
+    Defines the spatial pattern of smoke emission within a rectangular domain.
+
+    Attributes:
+        SMOOTH: A continuous, smooth distribution of smoke.
+        SHARP: A sharply defined, high-contrast distribution.
+        SOLID: A uniform, solid block of smoke.
+        DISCRETE: Smoke is emitted in discrete, separated patches.
+        DASHED: Smoke is emitted in a dashed-line pattern.
+        DOTTED: Smoke is emitted in a dotted-line pattern.
+    """
+
+    SMOOTH = 0
+    SHARP = 1
+    SOLID = 2
+    DISCRETE = 3
+    DASHED = 4
+    DOTTED = 5
+
+
+
 
 

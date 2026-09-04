@@ -7,7 +7,7 @@ import os
 import atexit
 
 from .colors import ColorSequence
-from .validators import _fatal_error, PositiveInt, StrictBool, StrictString, NumberRange, _count_function_parameters
+from .validators import ResolutionValidator, _fatal_error, PositiveInt, StrictBool, StrictString, NumberRange, _count_function_parameters
 
 # region initial settings [blue]
 
@@ -49,6 +49,21 @@ def _mathflow_warning_formatter(message, category, filename, lineno, line=None):
 
 # Override the default Python warning formatter
 warnings.formatwarning = _mathflow_warning_formatter
+
+
+_scene = None
+
+def get_scene():
+    """
+    Retrieves the currently active simulation scene.
+    Raises an error if the user tries to create objects before initializing a scene.
+    """
+
+    global _scene
+    if _scene is None:
+        _fatal_error("You must instantiate Scene before creating any other engine components.", "RuntimeError")
+    return _scene
+
 
 # endregion
 
@@ -131,9 +146,8 @@ class CoordinateSystem:
         math_height (float): The total span of the Y axis (max - min).
     """
 
-    width = PositiveInt()
-    height = PositiveInt()
     keep_aspect_ratio = StrictBool()
+    resolution = ResolutionValidator()
 
 
     def __init__(self, x_range: tuple = (-8, 8), y_range: tuple = (-8, 8), resolution: tuple = (1200, 800), keep_aspect_ratio: bool = False):
@@ -167,8 +181,8 @@ class CoordinateSystem:
         """
 
         self.resolution = resolution
-        self.width = resolution[0]
-        self.height = resolution[1]
+        self.width = self.resolution[0]
+        self.height = self.resolution[1]
 
         self.math_width = x_range[1] - x_range[0]
         self.math_height = y_range[1] - y_range[0]
@@ -324,53 +338,6 @@ class CoordinateSystem:
     def __repr__(self) -> str:
         return f"<CoordinateSystem(x_range=({round(self.x_min, 3)}, {round(self.x_max, 3)}), y_range=({round(self.y_min, 3)}, {round(self.y_max, 3)}), width={self.width}, height={self.height})>"
 
-    # region Setters and Getters [setters]
-    @property
-    def x_range(self):
-        return self._x_range
-    @x_range.setter
-    def x_range(self, value):
-        try:
-            lenght = len(value)
-        except TypeError:
-            _fatal_error(f"x_range must be a sequence (e.g., tuple, list). Got {type(value).__name__}.", "TypeError")
-
-        if lenght != 2:
-            _fatal_error(f"x_range must have exactly 2 components (min, max). Got {lenght} components.", "ValueError")
-
-        try:
-            floats = [float(c) for c in value]
-        except (ValueError, TypeError):
-            _fatal_error(f"x_range must contain only numbers. Got {value}.", "TypeError")
-
-        if floats[0] >= floats[1]:
-            _fatal_error(f"x_range min value must be less than max value. Got {floats[0]} >= {floats[1]}.", "ValueError")
-
-        self._x_range = floats
-
-    @property
-    def y_range(self):
-        return self._y_range
-    @y_range.setter
-    def y_range(self, value):
-        try:
-            lenght = len(value)
-        except TypeError:
-            _fatal_error(f"y_range must be a sequence (e.g., tuple, list). Got {type(value).__name__}.", "TypeError")
-
-        if lenght != 2:
-            _fatal_error(f"y_range must have exactly 2 components (min, max). Got {lenght} components.", "ValueError")
-
-        try:
-            floats = [float(c) for c in value]
-        except (ValueError, TypeError):
-            _fatal_error(f"y_range must contain only numbers. Got {value}.", "TypeError")
-
-        if floats[0] >= floats[1]:
-            _fatal_error(f"y_range min value must be less than max value. Got {floats[0]} >= {floats[1]}.", "ValueError")
-
-        self._y_range = floats
-    # endregion
 
 
 
@@ -392,6 +359,9 @@ class Scene:
     detect it and call it exactly once per frame, just before the rendering phase.
     This is ideal for custom animations, complex state machines, or physical simulations.
     """
+
+    pending_elements = []
+
 
     name = StrictString()
     background_color = ColorSequence()
@@ -459,6 +429,9 @@ class Scene:
         self.time = 0.0
         self.dt = 0.005
 
+        global _scene
+        _scene = self
+
         atexit.register(self._warn_if_not_run)
 
     def _flag_for_update(self, name):
@@ -475,6 +448,12 @@ class Scene:
         - Handles mouse and keyboard clicks.
         - Gets the mouse cursor position.
         """
+
+        for obj in Scene.pending_elements:
+            if getattr(obj, '_parent', None) is None:
+                self.add(obj)
+
+        Scene.pending_elements.clear()
 
         self._has_run = True
 

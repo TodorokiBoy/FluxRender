@@ -9,8 +9,9 @@ from typing import Sequence, Tuple
 
 
 
-class SpatialRegion:
+class SpatialRegion():
     def __init__(self):
+        cr.Scene.pending_elements.append(self)
         self.active = True
         self.scene = None
 
@@ -73,7 +74,6 @@ class CircularRegion(SpatialRegion):
 
         Notes:
             * **units**: The `world_fixed` flag is crucial for determining how the `center` and `radius` parameters are interpreted. When `world_fixed` is False, they are in screen pixels; when True, they are in world units.
-            * **rendering**: If `visible` is set to True, it is essential to add the CircularRegion instance to the scene using `scene.add(your_region)` for it to be rendered. However, even if `visible` is False, the CircularRegion can still function as an emitter or probe target without being added to the scene.
 
         Example:
             Creating a screen-fixed UI Particle emitter:
@@ -90,7 +90,6 @@ class CircularRegion(SpatialRegion):
                 emitter=ui_emitter
             )
 
-            scene.add(particle_system) # You don't need to add the CircularRegion itself to the scene for it to function as an emitter, but you do need to add it if you want it to be visible.
             ```
 
             Creating a visible, world-fixed Particle emitter:
@@ -107,7 +106,6 @@ class CircularRegion(SpatialRegion):
                 emitter=world_emitter
             )
 
-            scene.add(particle_system, world_emitter) # We want the CircularRegion to be visible, so we need to add it to the scene.
             ```
         """
 
@@ -310,9 +308,6 @@ class CursorRegion(SpatialRegion):
                 * **False** (Default): The region only emits/probes when the user clicks and holds the mouse button.
                 * **True**: The region constantly emits/probes data on every frame, regardless of mouse clicks.
 
-        Notes:
-            * **Scene Addition Required**: Unlike CircularRegion, a CursorRegion instance always needs to be added to the scene using `scene.add(your_region)`.
-
         Example:
             Setting up an interactive, visible cursor emitter:
             ```python
@@ -331,7 +326,6 @@ class CursorRegion(SpatialRegion):
                 emitter=interactive_cursor
             )
 
-            scene.add(particle_system, interactive_cursor)
             ```
 
             Setting up a constantly active cursor probe:
@@ -340,7 +334,7 @@ class CursorRegion(SpatialRegion):
 
             # [Initialize scene and coordinate system here]
 
-            math_engine = fr.VectorMathEngine(scene, primary_vector_function=lambda x, y: (y, -x))
+            math_engine = fr.VectorMathEngine(primary_vector_function=lambda x, y: (y, -x))
 
             # A CursorRegion that continuously probes the vector field under the mouse cursor, even without clicks.
             probing_cursor = fr.CursorRegion(
@@ -356,7 +350,6 @@ class CursorRegion(SpatialRegion):
             )
             probe.add_listener(lambda value: print(f"Current velocity at cursor: {value}", end="\\r"))
 
-            scene.add(probe, probing_cursor)
             ```
 
         """

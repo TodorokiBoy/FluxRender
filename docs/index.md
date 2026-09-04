@@ -1,29 +1,50 @@
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+
 # FluxRender
 
-**A high-performance, architecturally advanced engine for mathematical vector field and topological visualization.**
+**A high-performance engine for mathematical vector field visualization and fluid dynamics.**
 
-FluxRender is not just a plotting library; it is a dynamic, Taichi-powered evaluation engine designed for physicists, mathematicians, and engineers. It bridges the gap between complex mathematical definitions and stunning, real-time visual analysis.
+FluxRender is a Taichi-powered evaluation engine designed for physicists, mathematicians, and engineers. It bridges the gap between complex mathematical definitions and real-time visual analysis.
 
-By combining an intelligent, zero-redundancy math engine with native HSL color interpolation and adaptive spatial grids, FluxRender allows you to explore chaotic attractors, fluid dynamics, and topological tensors interactively.
+By combining a zero-redundancy math engine with a built-in Lattice Boltzmann (LBM) fluid solver, native HSL color interpolation, and adaptive spatial grids, FluxRender allows you to explore chaotic attractors, aerodynamic flows, and topological tensors interactively.
+
+
+---
+
+
+## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">water</span> Fluid Dynamics (Physics Engine)
+
+*   **Lattice Boltzmann Solver:** An integrated 2D fluid dynamics solver (D2Q9) that simulates aerodynamic flows, vortices, and fluid interactions directly on the GPU.
+*   **Solid Colliders:** Embed physical obstacles into the grid using mathematical inequalities (`EquationCollider`) or external alpha-channel image files (`ImageCollider`).
+*   **Boundary Control:** Configure perimeter behaviors, including velocity inflows, open outflows, and periodic (wrapping) spaces.
+*   **State Baking:** Save and load microscopic fluid distributions as binary `.npy` files to bypass lengthy spin-up calculations and resume simulations instantly.
+
+<video autoplay loop muted playsinline width="100%">
+  <source src="assets/rib - demo.mp4" type="video/mp4">
+</video>
+
+
+---
+
+
+## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">function</span> Mathematical Evaluation
+
+*   **Zero-Redundancy Execution:** Evaluates primary vector fields once per frame. Topological metrics (like divergence or curl) reuse pre-calculated vector data, preventing redundant GPU operations.
+*   **Automatic Vectorization & Time Injection:** Write mathematical logic in Python or NumPy. The engine inspects function signatures, handles vectorization fallbacks, and automatically injects simulation time (`t`).
+*   **Interactive Data Probes:** Map screen coordinates to mathematical space using `CursorRegion` to sample local properties or emit particles in real-time.
 
 <video autoplay loop muted playsinline width="100%">
   <source src="assets/fluxrender_demo.mp4" type="video/mp4">
 </video>
 
----
 
-## 🔥 Core Architecture & Features
 
-FluxRender is built around a philosophy of computational efficiency and seamless user experience:
+## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">memory</span> Core Architecture & Visualization
 
-* **Massive Particle Dynamics:** Effortlessly simulate, render, and track tens of thousands of particles simultaneously. The particles are driven natively by the underlying mathematical engine, allowing for real-time observation of fluid flows and chaotic systems.
-* **Advanced Field Rendering Modes:** The arrow-based vector field is strictly engineered for topological analysis. It features five distinct rendering strategies (including `SCREEN_FIXED`, `WORLD_FIXED`, and `ZOOM_DENSITY_ADAPTIVE`). The grid dynamically recalculates and adapts to your camera's zoom level and local mathematical density, ensuring crisp, uncluttered visual flow regardless of the scale.
-* **Zero-Redundancy Math Engine:** The engine evaluates your primary vector fields once per frame. When applying custom topological metrics (like divergence, curl, or kinetic energy) to your visual entities, the engine securely passes pre-calculated vector data to your functions, saving millions of redundant operations.
-* **Automatic Vectorization & Time Injection:** Write your mathematical logic in pure Python or native NumPy. FluxRender dynamically inspects your function signatures, automatically injects simulation time (`t`) if requested, and falls back to safe vectorization for unoptimized scalar functions.
-* **Interactive Regions & Data Probes:** Bridge the gap between the user and the math. Use `CircularRegion` or `CursorRegion` to define precise spatial boundaries. Attach them to your mouse to dynamically emit particles on click, or use them as `DataProbes` to sample and display local mathematical properties simply by hovering over the field.
-* **Total Visual Granularity:** Every single visual component is fully exposed. Control the exact thickness, opacity, geometry, and anti-aliasing of vector arrows and grids. The built-in `ColorMapper` maps scalars directly through the HSL space (avoiding muddy RGB mid-tones) and allows you to inject custom mapping algorithms (`scale_function`) for absolute visual precision.
-* **Seamless UI Integration:** Turn static simulations into interactive topological dashboards effortlessly. FluxRender provides a streamlined built-in UI system that allows you to instantly attach custom buttons and interaction listeners to your scene.
-
+*   **Particle Dynamics:** Simulate, render, and track tens of thousands of particles driven natively by either the LBM fluid solver or custom mathematical vector fields.
+*   **Advanced Rendering Modes:** Arrow-based vector fields feature multiple rendering strategies (e.g., `SCREEN_FIXED`, `ZOOM_DENSITY_ADAPTIVE`), dynamically recalculating grid spacing based on camera zoom.
+*   **Visual Granularity:** Control the thickness, opacity, geometry, and anti-aliasing of visual elements. The `ColorMapper` maps scalars directly through HSL space, avoiding RGB mid-tones.
+*   **UI Integration:** A built-in UI system allows for attaching custom buttons and interaction listeners directly to the scene workspace.
 
 <video autoplay loop muted playsinline width="100%">
   <source src="assets/fluxrender_modes.mp4" type="video/mp4">
@@ -31,7 +52,9 @@ FluxRender is built around a philosophy of computational efficiency and seamless
 
 ---
 
-## 🚀 Quick Start
+
+
+## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">rocket_launch</span> Quick Start
 
 See the engine in action. This minimal setup creates a fully interactive, swirling vortex, evaluated and colored dynamically based on its rotational velocity.
 
@@ -50,9 +73,9 @@ fr.quick_simulate(flow_vector) # This single line sets up a full interactive sim
 
 
 
-## 📖 Documentation
+## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">menu_book</span> Documentation
 
-Dive deeper into the architecture, explore the 5 advanced rendering modes, and learn how to attach interactive Particle Systems and Cursor Regions in the official documentation:
+Dive deeper into the architecture, explore the rendering modes, and learn how to build complex physical environments in the official documentation:
 
 👉 [Read the full API Reference & Guides here](./coordinate_system)
 

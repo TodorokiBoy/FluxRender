@@ -63,10 +63,7 @@ axes = fr.Axis(
 # Advanced Optimization: By initializing a centralized Math Engine and
 # injecting it into multiple visual entities later, we prevent the GPU
 # from calculating the exact same mathematical equations redundantly.
-math_engine = fr.VectorMathEngine(
-    scene=scene,
-    primary_vector_function=flow_vector
-)
+math_engine = fr.VectorMathEngine(flow_vector)
 
 custom_velocity_mapper = fr.ColorMapper(
     min_hue=190,
@@ -132,13 +129,8 @@ velocity_info = fr.DynamicText(
 )
 
 # ==========================================
-# 7. ASSEMBLY & EXECUTION
+# 7. EXECUTION
 # ==========================================
-scene.add(
-    grid, axes,
-    vortex_vector_field, vortex_particles,
-    mouse_region, probe, normalization_button, velocity_info
-)
 scene.run()
 ```
 

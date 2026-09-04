@@ -123,6 +123,9 @@ def parse_color(color_input: Sequence[float]) -> Tuple[float, float, float, floa
     return (floats[0], floats[1], floats[2], floats[3])
 
 class ColorSequence:
+    def __init__(self, accept_none: bool = False):
+        self.accept_none = accept_none
+
     def __set_name__(self, owner, name):
         self.private_name = '_' + name
 
@@ -130,6 +133,10 @@ class ColorSequence:
         return getattr(obj, self.private_name)
 
     def __set__(self, obj, value):
+        if self.accept_none and value is None:
+            setattr(obj, self.private_name, None)
+            return
+
         safe_color = parse_color(value)
         setattr(obj, self.private_name, safe_color)
 

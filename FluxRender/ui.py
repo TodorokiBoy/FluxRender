@@ -88,7 +88,6 @@ class UIStyle:
         )
 
         warning_container.add(action_button)
-        scene.add(warning_container)
         ```
     """
 
@@ -146,6 +145,8 @@ class UIWidget(en.Renderable):
 
 
     def __init__(self, position: Sequence[int], width: int = 150, height: int = 50, align: Align = Align.LEFT_TOP, style: UIStyle = None):
+        super().__init__()
+
         self.position = position
         self.width = width
         self.height = height
@@ -157,6 +158,7 @@ class UIWidget(en.Renderable):
         if UIWidget._container_hierarchy_stack:
             active_container = UIWidget._container_hierarchy_stack[-1]
             active_container._pending_children.append(self)
+
 
         if style is None:
             self.style = UIStyle()
@@ -276,7 +278,6 @@ class Button(UIWidget):
                 )
             )
 
-            scene.add(vector_field, button)
             ```
         """
 
@@ -631,10 +632,10 @@ class DynamicText(UIWidget):
             scene = fr.create_workspace()
 
             # 3. Create a math engine based on our flow function
-            math_engine = fr.VectorMathEngine(scene, flow_vector)
+            math_engine = fr.VectorMathEngine(flow_vector)
 
             # 4. Create vector field (optional)
-            vortex_vector_field = fr.VectorField(vec_function=flow_vector)
+            vortex_vector_field = fr.VectorField(flow_vector)
 
 
             # 5. Set up a DataProbe to track the velocity at the mouse cursor's position
@@ -652,8 +653,6 @@ class DynamicText(UIWidget):
                 position=(20, 600)
             )
 
-            # 6. Add your entities to the scene and launch!
-            scene.add(vortex_vector_field, text, mouse_region, probe)
             scene.run()
             ```
         """
@@ -908,9 +907,10 @@ class Grid(en.Renderable):
                 density=50
             )
 
-            scene.add(main_grid, secondary_grid)
             ```
         """
+
+        super().__init__()
 
         self.coords = None
 
@@ -1289,10 +1289,10 @@ class Axis(en.Renderable):
                 cover_background = True,  # Make labels cover elements behind them
                 arrow_color = (1, 0.8, 0, 1)  # Yellow arrows
             )
-            scene.add(axis)
             ```
         """
 
+        super().__init__()
 
         self.color_gpu = ti.Vector.field(4, dtype=float, shape=())
         self.label_color_gpu = ti.Vector.field(4, dtype=float, shape=())
@@ -1782,8 +1782,6 @@ class VBox(Container):
             # Add buttons to the container
             vertical_container.add(button1, button2, button3)
 
-            # Add the container to the scene
-            scene.add(vertical_container)
             ```
 
             Creating a vertical set of three buttons using the context manager to automatically add buttons to the container:
@@ -1804,9 +1802,6 @@ class VBox(Container):
                 button2 = fr.Button("Blue", print_name)
                 button3 = fr.Button("Green", print_name)
 
-
-            # Add the container to the scene
-            scene.add(vertical_container)
             ```
         """
 
@@ -1912,8 +1907,6 @@ class HBox(Container):
             # Add buttons to the container
             horizontal_container.add(button1, button2, button3)
 
-            # Add the container to the scene
-            scene.add(horizontal_container)
             ```
 
             Creating a horizontal set of three buttons using the context manager to automatically add buttons to the container:
@@ -1934,8 +1927,6 @@ class HBox(Container):
                 button2 = fr.Button("Blue", print_name)
                 button3 = fr.Button("Green", print_name)
 
-            # Add the container to the scene
-            scene.add(horizontal_container)
             ```
         """
 
@@ -1981,7 +1972,7 @@ class HBox(Container):
 
 
 
-def create_mode_switch(scene: cr.Scene, vector_field: en.VectorField, add_to_scene: bool = True) -> Button:
+def create_mode_switch(vector_field: en.VectorField) -> Button:
     """
     Creates an interactive UI button that cycles through the available rendering modes
     of a vector field.
@@ -1993,11 +1984,8 @@ def create_mode_switch(scene: cr.Scene, vector_field: en.VectorField, add_to_sce
     seamlessly back to the first available mode.
 
     Args:
-        scene (cr.Scene): The main scene object where the button will be registered
-            and rendered.
         vector_field (en.VectorField): The target vector field whose rendering mode
             will be controlled by this button.
-        add_to_scene (bool): If True, the constructed button will be automatically added to the scene.
 
     Returns:
         Button: The constructed UI button widget, fully bound to the scene and
@@ -2017,12 +2005,13 @@ def create_mode_switch(scene: cr.Scene, vector_field: en.VectorField, add_to_sce
 
         vector_field = fr.VectorField(swirling_vortex)
 
-        fr.create_mode_switch(scene, vector_field)
+        fr.create_mode_switch(vector_field)
 
-        scene.add(vector_field)
         scene.run()
         ```
     """
+
+    scene = cr.get_scene()
 
     def toggle_mode(button):
         mode_iter = iter(mode_mapping.keys())
@@ -2056,11 +2045,9 @@ def create_mode_switch(scene: cr.Scene, vector_field: en.VectorField, add_to_sce
         )
     )
 
-    if add_to_scene:
-        scene.add(btn)
     return btn
 
-def create_property_switch(scene: cr.Scene, *target_entities, add_to_scene: bool = True) -> VBox:
+def create_property_switch(*target_entities) -> VBox:
     """
     Creates a vertical UI panel containing a set of buttons to toggle the active rendering property
     for multiple vector fields or particle systems.
@@ -2078,10 +2065,8 @@ def create_property_switch(scene: cr.Scene, *target_entities, add_to_scene: bool
     by unsupported custom property switches.
 
     Args:
-        scene (cr.Scene): The main scene object where the UI container will be registered.
         *target_entities: An arbitrary number of objects (e.g., VectorField, ParticleSystem)
             that possess a 'color_property' attribute to be updated.
-        add_to_scene (bool): If True, the constructed VBox will be automatically added to the scene.
 
     Returns:
         VBox: The constructed vertical container holding the property buttons, fully bound to the scene.
@@ -2101,14 +2086,16 @@ def create_property_switch(scene: cr.Scene, *target_entities, add_to_scene: bool
         vector_field = fr.VectorField(swirling_vortex)
         particles = fr.ParticleSystem(swirling_vortex)
 
-        fr.create_property_switch(scene, vector_field, particles)
+        fr.create_property_switch(vector_field, particles)
 
-        scene.add(vector_field, particles)
         scene.run()
         ```
     """
 
         # Data-driven mapping: (Button Label, Target Enum Property)
+
+    scene = cr.get_scene()
+
     property_mapping = [
         ("Component X", Property.COMPONENT_X),
         ("Component Y", Property.COMPONENT_Y),
@@ -2193,12 +2180,10 @@ def create_property_switch(scene: cr.Scene, *target_entities, add_to_scene: bool
     )
 
     container.add(*generated_buttons)
-    if add_to_scene:
-        scene.add(container)
 
     return container
 
-def create_color_scale_switch(scene: cr.Scene, mapper: en.ColorMapper, add_to_scene: bool = True) -> Button:
+def create_color_scale_switch(mapper: en.ColorMapper) -> Button:
     """
     Creates an interactive UI button that cycles through the available color scaling types.
 
@@ -2208,9 +2193,7 @@ def create_color_scale_switch(scene: cr.Scene, mapper: en.ColorMapper, add_to_sc
     through standard mathematical scales.
 
     Args:
-        scene (cr.Scene): The main scene object where the button will be registered.
         mapper (en.ColorMapper): The target color mapper whose scale type will be controlled.
-        add_to_scene (bool): If True, the constructed Button will be automatically added to the scene.
 
     Returns:
         Button: The constructed UI button widget.
@@ -2230,12 +2213,13 @@ def create_color_scale_switch(scene: cr.Scene, mapper: en.ColorMapper, add_to_sc
         color_mapper = fr.ColorMapper()
         vector_field = fr.VectorField(swirling_vortex, color_mapper=color_mapper)
 
-        fr.create_color_scale_switch(scene, color_mapper)
+        fr.create_color_scale_switch(color_mapper)
 
-        scene.add(vector_field)
         scene.run()
         ```
     """
+
+    scene = cr.get_scene()
 
     scale_mapping = {
         ScaleType.LINEAR: "Linear",
@@ -2272,15 +2256,13 @@ def create_color_scale_switch(scene: cr.Scene, mapper: en.ColorMapper, add_to_sc
         style=UIStyle(font_size=16)
     )
 
-    if add_to_scene:
-        scene.add(btn)
+
     return btn
 
-def create_cursor_probe_display(scene: cr.Scene,
+def create_cursor_probe_display(
                                 vector_function: Callable | me.VectorMathEngine,
                                 target_property: en.Property | None = None,
                                 display_position: Sequence[int] = (20, 100),
-                                add_to_scene: bool = True
                                 ) -> Tuple[rg.CursorRegion, pr.DataProbe, DynamicText]:
     """
     The text widget automatically updates every frame, displaying the value of the requested
@@ -2290,11 +2272,9 @@ def create_cursor_probe_display(scene: cr.Scene,
     a mathematical data probe, and a dynamic user interface text display.
 
     Args:
-        scene (Scene): The main scene to which the elements will be attached.
         vector_function (Callable | VectorMathEngine): The mathematical function or math engine used for calculations.
         target_property (Property | None): The specific vector field property to measure (e.g., DIVERGENCE). If None, the current value of the vector field will be displayed. Default is None.
         display_position (Sequence[int]): The screen coordinates (x, y) where the UI text will be anchored.
-        add_to_scene (bool): Whether to automatically add the created elements to the scene. Set to False if you want to manage their addition manually.
 
     Returns:
         cursor_tracking_region (CursorRegion): The cursor tracking region.
@@ -2313,19 +2293,18 @@ def create_cursor_probe_display(scene: cr.Scene,
             vector_dy = np.cos(x) * y
             return vector_dx, vector_dy
 
-        color_mapper = fr.ColorMapper()
-        vector_field = fr.VectorField(swirling_vortex, color_mapper=color_mapper)
+        vector_field = fr.VectorField(swirling_vortex)
 
         # Create dynamic text that displays the current value of a vector function under the cursor
-        fr.create_cursor_probe_display(scene, swirling_vortex)
+        fr.create_cursor_probe_display(swirling_vortex)
 
-        scene.add(vector_field)
         scene.run()
         ```
     """
 
+
     if callable(vector_function):
-        vector_function = me.VectorMathEngine(scene, vector_function)
+        vector_function = me.VectorMathEngine(vector_function)
 
     # Initialize the interactive region tracking the mouse cursor
     cursor_tracking_region = rg.CursorRegion(always_active=True)
@@ -2349,8 +2328,7 @@ def create_cursor_probe_display(scene: cr.Scene,
         text=text_provider_function,
     )
 
-    if add_to_scene:
-        scene.add(cursor_tracking_region, data_probe, dynamic_text_display)
+
 
     return cursor_tracking_region, data_probe, dynamic_text_display
 

@@ -47,7 +47,6 @@ def create_workspace(
         vector_field = fr.VectorField(swirling_vortex)
         particles = fr.ParticleSystem(swirling_vortex)
 
-        workspace.add(particles, vector_field)
         workspace.run()
         ```
     """
@@ -64,17 +63,16 @@ def create_workspace(
     scene = fr.Scene(window_title, coordinate_system)
 
     # Professional aesthetic: Thick, transparent major grid
-    major_grid = fr.Grid()
+    fr.Grid()
 
     # Professional aesthetic: Thin, dense minor grid
-    minor_grid = fr.Grid(color=(0.6, 0.6, 0.6, 0.2), density=50)
+    fr.Grid(color=(0.6, 0.6, 0.6, 0.2), density=50)
 
-    standard_axes = fr.Axis(
+    fr.Axis(
         color=(0.8, 0.8, 0.8, 1.0),
         cover_background=True
     )
 
-    scene.add(minor_grid, major_grid, standard_axes)
     return scene
 
 def quick_simulate(
@@ -114,7 +112,7 @@ def quick_simulate(
     # region 1. Engine & Entities Setup
     workspace = fr.create_workspace(resolution)
 
-    math_engine = fr.VectorMathEngine(workspace, vec_function)
+    math_engine = fr.VectorMathEngine(vec_function)
     color_mapper = fr.ColorMapper()
 
     vector_field = fr.VectorField(math_engine, color_mapper=color_mapper)
@@ -199,8 +197,8 @@ def quick_simulate(
     # endregion
 
     # region 4. Additional UI Switches (Scale & Mode)
-    color_scale_switch = fr.create_color_scale_switch(workspace, color_mapper, add_to_scene=False)
-    mode_switch = fr.create_mode_switch(workspace, vector_field, add_to_scene=False)
+    color_scale_switch = fr.create_color_scale_switch(color_mapper)
+    mode_switch = fr.create_mode_switch(vector_field)
 
     scale_mode_container = fr.VBox(
         style=fr.UIStyle(padding=(12, 12)),
@@ -248,16 +246,6 @@ def quick_simulate(
         spacing=15
     )
     main_wrapper.add(property_switch_container, scale_mode_container, informations_container)
-
-    # Inject all components into the rendering pipeline
-    workspace.add(
-        particles,
-        vector_field,
-        main_wrapper,
-        cursor_tracking_region,
-        data_probe_property,
-        data_probe_vector
-    )
     # endregion
 
     workspace.run()
@@ -285,7 +273,6 @@ def as_vector_field(**field_configuration_parameters):
         def vector_function(x, y):
             return np.sin(x) * y, np.cos(y) * x
 
-        scene.add(vector_function)
         scene.run()
         ```
     """

@@ -31,27 +31,30 @@ scene = fr.create_workspace(window_title="Custom Workspace Flow")
 
 # 3. Create a custom color mapper (This is entirely optional! If skipped, default colors apply)
 custom_velocity_mapper = fr.ColorMapper(
-    min_hue=280,
-    max_hue=180
+    min_hue=255,
+    max_hue=350,
+    min_saturation=0.8,
+    min_alpha=1,
+    min_lightness=0.5,
 )
 
-# 4. Initialize visual entities with your math and colors
+#4. Initialize visual entities with your math and colors
 vortex_vector_field = fr.VectorField(
     vec_function=flow_vector,
-    color_mapper=custom_velocity_mapper # Inject our custom color scheme into the vector field (optional)
+    color_mapper=custom_velocity_mapper, # Inject our custom color scheme into the vector field (optional)
+    mode=fr.FieldMode.SCREEN_FIXED  # Keep the vector field anchored to the screen, ignoring camera movement and zoom (optional)
 )
 vortex_particles = fr.ParticleSystem(
     vec_function=flow_vector,
-    color_mapper=custom_velocity_mapper, # Reuse the same color scheme for particles (optional)
-    radius=2,    # Make particles bigger (optional)
-    count=5000   # Decrease particle count (optional)
+    color_mapper=custom_velocity_mapper, # Reuse the same color scheme for particles
+    radius=0.8,    # Make particles smaller (optional)
+    count=15000   # Decrease particle count (optional)
 )
 
 # 5. Inject specific UI elements (We only want the mode switch here)
-fr.create_mode_switch(scene, vortex_vector_field)
+fr.create_mode_switch(vortex_vector_field)
 
-# 6. Add your entities to the scene and launch!
-scene.add(vortex_vector_field, vortex_particles)
+# 6. Launch the simulation!
 scene.run()
 ```
 
@@ -60,7 +63,7 @@ By breaking the setup into these steps, you tap into the true object-oriented po
 
 1. **Creation:** You instantiate individual components (`VectorField`, `ParticleSystem`).
 2. **Configuration:** You optionally tweak them (like passing a `ColorMapper`).
-3. **Registration:** You bind them together by adding them to the `Scene`.
+3. **Run:** You call the Scene method to start the simulation.
 
 This approach gives you the perfect balance: no need to configure grid density or label shifts on the axes, but absolute freedom over the data visualization itself. Ready to take complete control over every single pixel? Check out the [**Advanced Setup**](advanced_setup.md) guide.
 

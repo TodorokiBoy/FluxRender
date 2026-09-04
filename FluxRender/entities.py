@@ -1,8 +1,11 @@
+from dataclasses import field
+
 from .colors import ColorMapper, ColorSequence
-from .constants import FieldMode, Property, ScaleType, ArrowStyle
+from .constants import FieldMode, Property, ScaleType, ArrowStyle, EmissionEdge, SmokePattern
 from .graphics import ArrowAtlas
 from .validators import EnumValidator, ClipingPercentiles, _count_function_parameters, _fatal_error, PositiveNumber, NonNegativeNumber, PositiveInt, CoordinateSequence, StrictBool, Callable
 from .regions import SpatialRegion
+from . import physics as ph
 
 from . import core as cr
 from . import math_engine as me
@@ -15,6 +18,9 @@ import warnings
 
 
 class Renderable:
+    def __init__(self):
+        cr.Scene.pending_elements.append(self)
+
     def render(self, scene: cr.Scene):
         pass
 
@@ -26,6 +32,8 @@ class Renderable:
 
 class VectorEntity(Renderable):
     def __init__(self, vec_function, color_mapper: ColorMapper, color_property: Property, color_clipping_percentiles: Sequence[float]):
+        super().__init__()
+
         self._is_initialized = False
         self.vec_function = vec_function
         self.color_mapper = color_mapper
@@ -39,7 +47,7 @@ class VectorEntity(Renderable):
             else:
                 self.math_engine = self.vec_function
         elif callable(self.vec_function):
-            self.math_engine = me.VectorMathEngine(scene, self.vec_function, self.base_angle_vector, self.custom_color_function)
+            self.math_engine = me.VectorMathEngine(self.vec_function, self.base_angle_vector, self.custom_color_function)
         else:
             _fatal_error(f"vec_function must be either a VectorMathEngine instance or a callable function. Provided type: {type(self.vec_function)}", error_type="TypeError")
 
@@ -74,7 +82,6 @@ class VectorEntity(Renderable):
                 vec_function = lambda x, y: (y, -x),
                 color_property = fr.Property.VELOCITY
             )
-            scene.add(field)
 
             vector_component_x, vector_component_y = field.evaluate_vector_field(1.0, 0.0)
 
@@ -138,7 +145,6 @@ class VectorEntity(Renderable):
                 color_property = fr.Property.ANGLE,
                 base_angle_vector = rotating_reference
             )
-            scene.add(field)
 
             # The engine automatically handles the underlying time injection
             angle_vector_x, angle_vector_y = field.evaluate_angle_vector(0.0, 0.0)
@@ -186,7 +192,6 @@ class VectorEntity(Renderable):
             field = fr.VectorField(
                 vec_function = lambda x, y: (y, -x),
             )
-            scene.add(field)
 
             # Notice the third parameter 't'. The engine detects this and injects it.
             def custom_wind_perturbation(x, y, t):
@@ -247,7 +252,6 @@ class VectorEntity(Renderable):
             field = fr.VectorField(
                 vec_function = lambda x, y: (y, -x),
             )
-            scene.add(field)
 
             # Custom function that internally queries the field for vector data and calculates a scalar property (e.g., kinetic energy = 0.5 * (vx^2 + vy^2))
             def calculate_kinetic_energy(x, y):
@@ -313,19 +317,11 @@ class VectorFieldConfig:
 
 @ti.data_oriented
 class VectorField(VectorEntity):
-    """A visual entity that renders a mathematical vector field using directional arrows.
+    """A visual entity that renders a mathematical vector field using arrows.
 
-    The VectorField acts as the static, geometric counterpart to the dynamic ParticleSystem.
-    It queries the underlying mathematical engine across a spatial grid and visualizes
-    the results as a structured collection of arrows, where each arrow represents the
-    local magnitude and direction of the field at a specific point in space.
-
-    This class excels at topological analysis. It features highly advanced rendering
-    modes (such as FieldMode.ZOOM_DENSITY_ADAPTIVE) that dynamically recalculate grid
-    spacing based on the camera's zoom level and local mathematical chaos. By coupling
-    it with a ColorMapper, complex physical properties (like divergence, curl, or
-    custom tensor evaluations) can be instantly translated into intuitive, color-coded
-    visual maps.
+    It samples the underlying mathematical engine across a spatial grid, representing
+    local vector direction and magnitude. Grid spacing can be static or dynamically
+    recalculated based on rendering modes (e.g., camera zoom or flow topology).
     """
 
     spacing_x = PositiveNumber()
@@ -452,7 +448,6 @@ class VectorField(VectorEntity):
                 mode = fr.FieldMode.SCREEN_FIXED,
             )
 
-            scene.add(field)
             ```
 
             The same, but animated vector field and without directly defined VectorMathEngine (the engine will be created internally):
@@ -470,11 +465,12 @@ class VectorField(VectorEntity):
                 mode = fr.FieldMode.SCREEN_FIXED,
             )
 
-            scene.add(field)
             ```
         """
 
         super().__init__(vec_function, color_mapper, color_property, color_clipping_percentiles)
+
+        self.original_vec_function = vec_function
 
         # Dynamic configuration GPU
         self._thickness = thickness
@@ -1077,11 +1073,11 @@ class VectorField(VectorEntity):
 
             if np.abs(c_max - c_min) < 1e-5: # If all values are almost the same, set range to [0.0, pi] if coloring by angle, or [0.0, 1.0] if coloring by velocity
                 c_min = 0.0
-                if property == Property.VELOCITY or property == Property.CONVECTIVE_ACCELERATION:
+                if self.color_property == Property.VELOCITY or self.color_property == Property.CONVECTIVE_ACCELERATION:
                     c_max = 1.0
-                elif property == Property.ANGLE:
+                elif self.color_property == Property.ANGLE:
                     c_max = np.pi
-                elif property == Property.DIVERGENCE or property == Property.CURL or property == Property.COMPONENT_X or property == Property.COMPONENT_Y or property == Property.JACOBIAN or property == Property.OKUBO_WEISS or property == Property.CUSTOM:
+                elif self.color_property == Property.DIVERGENCE or self.color_property == Property.CURL or self.color_property == Property.COMPONENT_X or self.color_property == Property.COMPONENT_Y or self.color_property == Property.JACOBIAN or self.color_property == Property.OKUBO_WEISS or self.color_property == Property.CUSTOM:
                     c_min = -1.0
                     c_max = 1.0
 
@@ -1101,7 +1097,8 @@ class VectorField(VectorEntity):
         if current_state == self._last_cam_state and\
            self.math_engine._is_vec_function_time_dependent == False and\
            (self.math_engine._is_angle_function_time_dependent == False or self.color_property != Property.ANGLE) and\
-           (self.math_engine._is_custom_function_time_dependent == False or self.color_property != Property.CUSTOM):
+           (self.math_engine._is_custom_function_time_dependent == False or self.color_property != Property.CUSTOM) and\
+           not isinstance(self.original_vec_function, ph.FluidSandbox):
 
             self._draw_lines_gpu(scene.scene_layer, self.num_vectors)
             if self.draw_arrows: self._draw_arrowheads_gpu(scene.scene_layer, self.num_vectors, self.arrow_atlas)
@@ -1261,12 +1258,10 @@ class VectorField(VectorEntity):
 
 @ti.data_oriented
 class ParticleSystem(VectorEntity):
-    """A dynamic visualizer that simulates thousands of particles flowing through a vector field.
+    """A visual entity that simulates particles flowing through a vector field.
 
-    While a `VectorField` uses static arrows to show the direction of the math, a `ParticleSystem`
-    brings it to life. It drops thousands of tiny "tracers" into your mathematical fluid and lets
-    them flow. This is perfect for visualizing aerodynamics, fluid dynamics, or simply creating
-    hypnotic, beautiful animations of your equations.
+    It continuously updates the positions of tracer particles based on the underlying
+    mathematical vectors or fluid simulation to visualize the flow dynamics.
     """
 
 
@@ -1376,8 +1371,6 @@ class ParticleSystem(VectorEntity):
                 return -y, x
 
             particle_system = ParticleSystem(vec_function = rotational_field)
-
-            scene.add(particle_system)
             ```
 
             The same example, but with particles colored by their angle and a custom color palette:
@@ -1395,7 +1388,6 @@ class ParticleSystem(VectorEntity):
                 color_property = fr.Property.ANGLE  # Color based on vector angle relative to base_angle_vector (default [1.0, 0.0])
             )
 
-            scene.add(particle_system)
             ```
         """
 
@@ -1430,6 +1422,10 @@ class ParticleSystem(VectorEntity):
         self._particles_positions_np = np.zeros((count, 2), dtype=np.float32)
         self._particles_lifetimes_np = np.zeros(count, dtype=np.float32)
         self._particles_colors_np = np.zeros((count, 4), dtype=np.float32)
+
+        # Allocate memory for previous positions to enable streak rendering
+        self._particles_old_positions = ti.Vector.field(2, dtype=ti.float32, shape=count)
+        self._particles_old_positions_np = np.zeros((count, 2), dtype=np.float32)
 
         self._is_initialized = True
 
@@ -1487,11 +1483,11 @@ class ParticleSystem(VectorEntity):
 
             if np.abs(c_max - c_min) < 1e-5: # If all values are almost the same, set range to [0.0, pi] if coloring by angle, or [0.0, 1.0] if coloring by velocity
                 c_min = 0.0
-                if property == Property.VELOCITY or property == Property.CONVECTIVE_ACCELERATION:
+                if self.color_property == Property.VELOCITY or self.color_property == Property.CONVECTIVE_ACCELERATION:
                     c_max = 1.0
-                elif property == Property.ANGLE:
+                elif self.color_property == Property.ANGLE:
                     c_max = np.pi
-                elif property == Property.DIVERGENCE or property == Property.CURL or property == Property.COMPONENT_X or property == Property.COMPONENT_Y or property == Property.JACOBIAN or property == Property.OKUBO_WEISS or property == Property.CUSTOM:
+                elif self.color_property == Property.DIVERGENCE or self.color_property == Property.CURL or self.color_property == Property.COMPONENT_X or self.color_property == Property.COMPONENT_Y or self.color_property == Property.JACOBIAN or self.color_property == Property.OKUBO_WEISS or self.color_property == Property.CUSTOM:
                     c_min = -1.0
                     c_max = 1.0
 
@@ -1511,21 +1507,70 @@ class ParticleSystem(VectorEntity):
 
     @ti.kernel
     def _render_gpu(self, target: ti.template(), radius: float): # type: ignore
-        radius_squared = radius ** 2
+        radius_squared = (radius + 1) ** 2
+
         for i in range(self.count):
-            pos = self._particles_positions[i]
-            color = self._particles_colors[i]
+            current_position = self._particles_positions[i]
+            previous_position = self._particles_old_positions[i]
+            particle_color = self._particles_colors[i]
 
-            min_x = int(pos.x - radius)
-            max_x = int(pos.x + radius + 1)
-            min_y = int(pos.y - radius)
-            max_y = int(pos.y + radius + 1)
+            # Calculate a dynamic bounding box that strictly encapsulates the entire movement streak
+            minimum_x = int(ti.min(previous_position.x, current_position.x) - radius - 1)
+            maximum_x = int(ti.max(previous_position.x, current_position.x) + radius + 2)
+            minimum_y = int(ti.min(previous_position.y, current_position.y) - radius - 1)
+            maximum_y = int(ti.max(previous_position.y, current_position.y) + radius + 2)
 
-            for x in range(min_x, max_x):
-                for y in range(min_y, max_y):
-                    if (x - pos.x) ** 2 + (y - pos.y) ** 2 <= radius_squared:
-                        if 2 <= x < self.coords.width and 2 <= y < self.coords.height:
-                            target[x, y] = color
+            movement_vector = current_position - previous_position
+            movement_squared_length = movement_vector.dot(movement_vector)
+
+            for x in range(minimum_x, maximum_x):
+                for y in range(minimum_y, maximum_y):
+
+                    # Ensure the pixel is within the safe boundaries of the screen domain
+                    if 2 <= x < self.coords.width and 2 <= y < self.coords.height:
+                        pixel_coordinates = ti.Vector([float(x), float(y)])
+                        squared_distance = 0.0
+
+                        if movement_squared_length < 1e-5:
+                            # Particle is essentially stationary; render it as a standard circular point
+                            distance_to_start = pixel_coordinates - previous_position
+                            squared_distance = distance_to_start.dot(distance_to_start)
+                        else:
+                            # Particle moved significantly; render the mathematical capsule (line segment)
+                            pixel_to_start_vector = pixel_coordinates - previous_position
+
+                            # Project the pixel onto the movement line and clamp it directly to the segment bounds
+                            projection_factor = ti.math.clamp(
+                                pixel_to_start_vector.dot(movement_vector) / movement_squared_length,
+                                0.0,
+                                1.0
+                            )
+
+                            closest_point_on_line = previous_position + projection_factor * movement_vector
+                            distance_to_line = pixel_coordinates - closest_point_on_line
+                            squared_distance = distance_to_line.dot(distance_to_line)
+
+                        # Apply the color if the pixel falls inside the capsule radius
+                        if squared_distance <= radius_squared:
+                            distance = ti.sqrt(squared_distance)
+
+                            alpha_shape = 1.0 - ti.math.smoothstep(radius - 0.5, radius, distance)
+
+                            if alpha_shape > 0.0:
+                                final_alpha = particle_color.w * alpha_shape
+
+                                if particle_color.w > 0.99 and alpha_shape > 0.99:
+                                    target[x, y] = particle_color
+                                else:
+                                    existing_color = target[x, y]
+                                    out_alpha = final_alpha + existing_color.w * (1.0 - final_alpha)
+
+                                    source_rgb = particle_color.xyz * final_alpha
+                                    destination_rgb = existing_color.xyz * existing_color.w * (1.0 - final_alpha)
+
+                                    out_rgb = (source_rgb + destination_rgb) / ti.max(out_alpha, 1e-6)
+                                    target[x, y] = ti.Vector([out_rgb.x, out_rgb.y, out_rgb.z, out_alpha])
+
 
     def _default_opacity_function(self, normalized_lifetime):
         """
@@ -1543,7 +1588,7 @@ class ParticleSystem(VectorEntity):
 
         lengths = np.hypot(dx, dy)
         lengths[lengths == 0] = 1e-10 # Avoid division by zero for zero-length vectors
-        maximum_display_value = (self.coords.math_width / 10.0) * self.speed
+        maximum_display_value = (self.coords.math_width / 8.0) * self.speed
 
         if self.normalize_speed:
             dx = dx / lengths * maximum_display_value
@@ -1685,6 +1730,9 @@ class ParticleSystem(VectorEntity):
         # Normalize speed
         dx, dy = self._prepare_vector(dx, dy)
 
+        # Save current screen positions before applying mathematical movement
+        self._particles_old_positions_np[:] = self._particles_positions_np[:]
+        self._particles_old_positions.from_numpy(self._particles_old_positions_np)
 
         pos_x += dx * scene.dt
         pos_y += dy * scene.dt
@@ -1736,6 +1784,11 @@ class ParticleSystem(VectorEntity):
             self._particles_positions_np = np.zeros((self._count, 2), dtype=np.float32)
             self._particles_lifetimes_np = np.zeros(self._count, dtype=np.float32)
             self._particles_colors_np = np.zeros((self._count, 4), dtype=np.float32)
+
+            # Reallocate memory for previous positions when count changes
+            self._particles_old_positions = ti.Vector.field(2, dtype=ti.float32, shape=self._count)
+            self._particles_old_positions_np = np.zeros((self._count, 2), dtype=np.float32)
+
             self._init(self.scene)
 
 
@@ -1801,6 +1854,377 @@ class ParticleSystem(VectorEntity):
 
     #endregion
 
+
+
+
+@ti.data_oriented
+class SmokeSystem(VectorEntity):
+    """A visual entity that simulates and renders fluid advection using a grid-based smoke system.
+
+    The system uses a decoupled architecture to maintain performance: physical velocity field
+    evaluation is performed on a downscaled grid via CPU (NumPy), while semi-Lagrangian advection,
+    emission, and bilinear interpolation are executed at full screen resolution on the GPU (Taichi).
+    """
+
+
+    dissipation_factor = NonNegativeNumber()
+    grid_downscale = PositiveInt()
+    solid_color = ColorSequence(accept_none=True)
+    smoke_pattern = EnumValidator(SmokePattern)
+
+
+    def __init__(self,
+                vec_function,
+                dissipation_factor: float = 0.9995,
+                grid_downscale: int = 4,
+                solid_color: Sequence[float] = (1.0, 1.0, 1.0, 1.0),
+                color_mapper: ColorMapper = None,
+                color_property: Property = Property.VELOCITY,
+                color_clipping_percentiles: Sequence[float] = (5.0, 95.0), # from 0 to 100, (min_percentile, max_percentile)
+                emission_edge: Sequence[EmissionEdge] = (EmissionEdge.LEFT, EmissionEdge.RIGHT, EmissionEdge.TOP, EmissionEdge.BOTTOM),
+                smoke_pattern: SmokePattern = SmokePattern.SMOOTH,
+
+                # Parameters specific to Property.ANGLE color_property
+                base_angle_vector = None,
+
+                # Parameters specific to custom color function mode (when color_property is Property.CUSTOM_FUNCTION)
+                custom_color_function = None
+
+    ):
+        """
+        Args:
+            vec_function (Callable or VectorMathEngine): The mathematical function driving the fluid flow,
+                returning vector components (dx, dy).
+            dissipation_factor (float): The rate at which smoke density fades per frame.
+                Values closer to 1.0 make the smoke last longer. (Default: 0.9995)
+            grid_downscale (int): The factor by which the physical evaluation grid is reduced relative
+                to the screen resolution to save CPU cycles. The closer the value is to 1, the more accurate the behavior and coloring of the smoke. (Default: 4)
+            solid_color (Sequence[float]): A static RGBA color applied to the emitted smoke.
+                If None, the system defaults to dynamic pattern colors. (Default: (1.0, 1.0, 1.0, 1.0))
+            color_mapper (ColorMapper, optional): Maps specific field properties (e.g., velocity, curl)
+                to colors. Overrides solid_color and dynamic patterns if provided.
+            color_property (Property): The physical property used by the color_mapper. Only relevant if color_mapper is not None. (Default: Property.VELOCITY)
+            color_clipping_percentiles (Sequence[float]): Lower and upper percentiles used to clip
+                extreme values before applying the color_mapper. (Default: (5.0, 95.0))
+            emission_edge (Sequence[EmissionEdge]): The screen boundaries from which smoke is continuously emitted.
+            smoke_pattern (SmokePattern): The mathematical structural pattern applied to the smoke density at the emission edges. (Default: SmokePattern.SMOOTH)
+            base_angle_vector (tuple, list, or Callable, optional): The reference vector used for calculating
+                angles when color_property is set to ANGLE.
+            custom_color_function (Callable, optional): A user-defined mathematical function replacing
+                standard property evaluation when color_property is set to CUSTOM.
+
+
+        Example:
+            ```python
+            import FluxRender as fr
+
+            scene = fr.create_workspace()
+
+            # 1. Configure boundary conditions
+            inflow_boundary = fr.BoundaryConfiguration(fr.BoundaryType.INFLOW, inflow_velocity_x=0.05)
+            outflow_boundary = fr.BoundaryConfiguration(fr.BoundaryType.OPEN_OUTFLOW)
+
+            # 2. Initialize the fluid sandbox
+            with fr.FluidSandbox(
+                domain_x_range=(-6, 6),
+                domain_y_range=(-6, 6),
+                left_boundary=inflow_boundary,
+                right_boundary=outflow_boundary,
+            ) as sandbox:
+
+                # 3. Define a solid obstacle
+                fr.EquationCollider(equation_function=lambda x, y: (abs(x) ** (2/3) + abs(y) ** (2/3)) <= 1)
+
+            # 4. Create Smoke
+            fr.SmokeSystem(sandbox, solid_color=(0, 1, 1, 1))   # You can set solid_color to None if you want colored smoke
+
+            scene.run()
+            ```
+
+            ## Smoke colored by Property
+            ```python
+            mapper = fr.ColorMapper()
+            fr.SmokeSystem(sandbox, color_mapper=mapper, color_property=fr.Property.CURL)
+            ```
+        """
+
+
+        super().__init__(vec_function, color_mapper, color_property, color_clipping_percentiles)
+
+        self.scene = cr.get_scene()
+        self.coords = self.scene.coords
+
+        # Main grid (full resolution)
+        self.grid_width = self.scene.width
+        self.grid_height = self.scene.height
+
+        # Phisical grid (downscaled for performance)
+        self.grid_downscale = grid_downscale
+        self._vel_width = max(1, self.grid_width // self.grid_downscale)
+        self._vel_height = max(1, self.grid_height // self.grid_downscale)
+
+        self.dissipation_factor = dissipation_factor
+        self.time_step = 1.0
+        self.base_angle_vector = base_angle_vector
+        self.custom_color_function = custom_color_function
+        self.solid_color = solid_color
+        self._apply_solid_color = self.solid_color is not None
+        self._gpu_solid_color = ti.Vector(self.solid_color, dt=ti.f32) if self.solid_color else ti.Vector((0, 0, 0, 0), dt=ti.f32)
+
+        self.emission_edge = emission_edge
+        self._emission_edge_top = EmissionEdge.TOP in emission_edge
+        self._emission_edge_bottom = EmissionEdge.BOTTOM in emission_edge
+        self._emission_edge_left = EmissionEdge.LEFT in emission_edge
+        self._emission_edge_right = EmissionEdge.RIGHT in emission_edge
+        self.smoke_pattern = smoke_pattern
+
+        # 1-Dimensional scalar fields for smoke density
+        self._density_old = ti.field(dtype=float, shape=(self.grid_width, self.grid_height))
+        self._density_new = ti.field(dtype=float, shape=(self.grid_width, self.grid_height))
+
+        # 4-Dimensional vector fields for RGBA color advection
+        self._color_old = ti.Vector.field(4, dtype=float, shape=(self.grid_width, self.grid_height))
+        self._color_new = ti.Vector.field(4, dtype=float, shape=(self.grid_width, self.grid_height))
+
+        # self._mapper_color = np.zeros((self.grid_width, self.grid_height, 4), dtype=np.float32)
+        self._property_colors = ti.Vector.field(4, dtype=ti.f32, shape=(self._vel_width, self._vel_height))
+        self._property_colors_np = np.zeros((self._vel_width, self._vel_height, 4), dtype=np.float32)
+
+        # Downscaled grid for velocity field to improve performance
+        self._velocity = ti.Vector.field(2, dtype=ti.f32, shape=(self._vel_width, self._vel_height))
+        self._velocity_np = np.zeros((self._vel_width, self._vel_height, 2), dtype=np.float32)
+
+
+
+    def _init(self, scene) -> None:
+        self._init_engine(scene)
+
+
+
+    @ti.func
+    def _sample_data(self, field: ti.template(), x: float, y: float, w: int, h: int): # type: ignore
+        x0 = ti.cast(ti.floor(x), ti.i32)
+        y0 = ti.cast(ti.floor(y), ti.i32)
+        x1 = x0 + 1
+        y1 = y0 + 1
+
+        x0 = ti.max(0, ti.min(w - 1, x0))
+        y0 = ti.max(0, ti.min(h - 1, y0))
+        x1 = ti.max(0, ti.min(w - 1, x1))
+        y1 = ti.max(0, ti.min(h - 1, y1))
+
+        fx = x - ti.cast(x0, float)
+        fy = y - ti.cast(y0, float)
+
+        v00 = field[x0, y0]
+        v10 = field[x1, y0]
+        v01 = field[x0, y1]
+        v11 = field[x1, y1]
+
+        bottom = v00 * (1.0 - fx) + v10 * fx
+        top = v01 * (1.0 - fx) + v11 * fx
+        return bottom * (1.0 - fy) + top * fy
+
+
+    @ti.func
+    def _get_pattern_density(self, normalized_pos: float, current_time: float) -> float:
+        """Calculates smoke density based on the selected mathematical pattern."""
+        density_value = 1.0
+
+        if ti.static(self.smoke_pattern == SmokePattern.SMOOTH):
+            primary_wave = ti.math.sin(normalized_pos * 23.0 - current_time * 2.1)
+            secondary_wave = ti.math.sin(normalized_pos * 47.0 + current_time * 3.7)
+            tertiary_wave = ti.math.sin(normalized_pos * 73.0 - current_time * 1.3 + 4.2)
+            combined_waves = primary_wave + (secondary_wave * 0.5) + (tertiary_wave * 0.25)
+            # density_value = (combined_waves + 1.75) / 4.5 + 0.34
+            density_value = (combined_waves + 1.75) / 3.5 + 0.115
+
+        elif ti.static(self.smoke_pattern == SmokePattern.DISCRETE):
+            density_value = ti.math.sin(normalized_pos*50) ** 40 * 3.5
+
+        elif ti.static(self.smoke_pattern == SmokePattern.DASHED):
+            spatial_comb = ti.math.pow(ti.math.sin(normalized_pos * 60.0), 32.0)
+            time_pulse = ti.math.max(0.0, ti.math.sign(ti.math.sin(current_time * 10.0)))
+            density_value = spatial_comb * time_pulse * 5
+
+        elif ti.static(self.smoke_pattern == SmokePattern.DOTTED):
+            density_value = ti.math.pow(ti.math.sin(normalized_pos*50), 32.0) * 10 * (ti.math.pow(ti.math.sin(current_time * 15), 32.0) + ti.math.pow(ti.math.cos(current_time * 15), 32.0))
+
+        elif ti.static(self.smoke_pattern == SmokePattern.SHARP):
+            frequency_modulator = ti.math.sin(current_time * 1.5) * 10.0 + ti.math.sin(normalized_pos * 15.0) * 5.0
+            dynamic_frequency = 25.0 + frequency_modulator
+            phase_shift = current_time * (2.0 + ti.math.sin(normalized_pos * 5.0))
+            raw_density = ti.math.sin(normalized_pos * dynamic_frequency - phase_shift)
+            density_value = (raw_density + 1.0) * 0.45 + 0.1
+
+        return density_value
+
+    @ti.func
+    def _get_emission_color(self, normalized_pos: float, current_time: float) -> ti.math.vec4: # type: ignore
+        """Returns the base color or evaluates dynamic rainbow stripes."""
+        final_color = ti.Vector([0.0, 0.0, 0.0, 1.0])
+
+        if ti.static(self._apply_solid_color):
+            final_color = self._gpu_solid_color
+        else:
+            color_red = (ti.math.sin(normalized_pos * 12.0 + current_time * 1.5) + 1.0) * 0.5
+            color_green = (ti.math.sin(normalized_pos * 17.0 - current_time * 1.1 + 2.0) + 1.0) * 0.5
+            color_blue = (ti.math.sin(normalized_pos * 9.0 + current_time * 0.8 + 4.0) + 1.0) * 0.5
+
+            final_color = ti.Vector([color_red, color_green, color_blue, 1.0])
+
+
+        return final_color
+
+    @ti.kernel
+    def _advect_kernel(self,
+                       d_old: ti.template(),  # type: ignore
+                       d_new: ti.template(),  # type: ignore
+                       c_old: ti.template(),  # type: ignore
+                       c_new: ti.template(),  # type: ignore
+                       current_time: float):
+
+        if ti.static(self._emission_edge_left):
+            for y_index in range(self.grid_height):
+                normalized_y = float(y_index) / float(self.grid_height)
+                d_old[0, y_index] = self._get_pattern_density(normalized_y, current_time)
+                c_old[0, y_index] = self._get_emission_color(normalized_y, current_time)
+
+        if ti.static(self._emission_edge_right):
+            for y_index in range(self.grid_height):
+                normalized_y = float(y_index) / float(self.grid_height)
+                d_old[self.grid_width - 1, y_index] = self._get_pattern_density(normalized_y, current_time)
+                c_old[self.grid_width - 1, y_index] = self._get_emission_color(normalized_y, current_time)
+
+        if ti.static(self._emission_edge_top):
+            for x_index in range(self.grid_width):
+                normalized_x = float(x_index) / float(self.grid_width)
+                d_old[x_index, 0] = self._get_pattern_density(normalized_x, current_time)
+                c_old[x_index, 0] = self._get_emission_color(normalized_x, current_time)
+
+        if ti.static(self._emission_edge_bottom):
+            for x_index in range(self.grid_width):
+                normalized_x = float(x_index) / float(self.grid_width)
+                d_old[x_index, self.grid_height - 1] = self._get_pattern_density(normalized_x, current_time)
+                c_old[x_index, self.grid_height - 1] = self._get_emission_color(normalized_x, current_time)
+
+
+        # 2. Semi-Lagrangian advection: For each pixel, trace backward along the velocity field to find the source location, then sample the old density and color fields at that location.
+        for i, j in ti.ndrange(self.grid_width, self.grid_height):
+            vel_u = (float(i) / float(self.grid_width - 1)) * float(self._vel_width - 1)
+            vel_v = (float(j) / float(self.grid_height - 1)) * float(self._vel_height - 1)
+
+            pixel_vel = self._sample_data(self._velocity, vel_u, vel_v, self._vel_width, self._vel_height)
+
+            source_x = float(i) - (pixel_vel.x * self.time_step)
+            source_y = float(j) - (pixel_vel.y * self.time_step)
+
+            sampled_density = self._sample_data(d_old, source_x, source_y, self.grid_width, self.grid_height)
+            sampled_color = self._sample_data(c_old, source_x, source_y, self.grid_width, self.grid_height)
+
+            d_new[i, j] = sampled_density * self.dissipation_factor
+            c_new[i, j] = sampled_color
+
+
+    def _fill_colors(self, values):
+        c_min = self.color_mapper.min_value
+        c_max = self.color_mapper.max_value
+
+        if c_min is None or c_max is None:
+            c_min, c_max = np.percentile(values, self.color_clipping_percentiles)
+
+            if np.abs(c_max - c_min) < 1e-5: # If all values are almost the same, set range to [0.0, pi] if coloring by angle, or [0.0, 1.0] if coloring by velocity
+                c_min = 0.0
+                if self.color_property == Property.VELOCITY or self.color_property == Property.CONVECTIVE_ACCELERATION:
+                    c_max = 1.0
+                elif self.color_property == Property.ANGLE:
+                    c_max = np.pi
+                elif self.color_property == Property.DIVERGENCE or self.color_property == Property.CURL or self.color_property == Property.COMPONENT_X or self.color_property == Property.COMPONENT_Y or self.color_property == Property.JACOBIAN or self.color_property == Property.OKUBO_WEISS or self.color_property == Property.CUSTOM:
+                    c_min = -1.0
+                    c_max = 1.0
+
+            values = np.clip(values, c_min, c_max)
+
+
+        colors_rgba = self.color_mapper.map_array(values.flatten(), min_value=c_min, max_value=c_max)
+        self._property_colors_np[:] = colors_rgba.reshape(self._vel_width, self._vel_height, 4)
+
+        self._property_colors.from_numpy(self._property_colors_np)
+
+
+    def update(self, scene: cr.Scene):
+        screen_x_pos = np.linspace(0, self.grid_width - 1, self._vel_width, dtype=np.float32)
+        screen_y_pos = np.linspace(0, self.grid_height - 1, self._vel_height, dtype=np.float32)
+
+        screen_x_grid, screen_y_grid = np.meshgrid(screen_x_pos, screen_y_pos, indexing='ij')
+        x_pos, y_pos = self.coords.to_math(screen_x_grid, screen_y_grid)
+
+        if self.color_mapper is not None:
+            dx, dy, property_values = self.math_engine.evaluate_field_and_property(self.color_property, x_pos, y_pos)
+            self._fill_colors(property_values)
+        else:
+            dx, dy = self.math_engine.evaluate_primary_vector_function(x_pos, y_pos)
+
+        pixel_velocity_x = (dx * (self.grid_width / self.coords.math_width)).astype(np.float32)
+        pixel_velocity_y = (dy * (self.grid_height / self.coords.math_height)).astype(np.float32)
+
+        self._velocity_np[..., 0] = pixel_velocity_x
+        self._velocity_np[..., 1] = pixel_velocity_y
+        self._velocity.from_numpy(self._velocity_np)
+
+        self._advect_kernel(
+            self._density_old, self._density_new,
+            self._color_old, self._color_new,
+            self.scene.time,
+        )
+
+        self._density_old, self._density_new = self._density_new, self._density_old
+        self._color_old, self._color_new = self._color_new, self._color_old
+
+
+    @ti.kernel
+    def _render_smoke_kernel(self,
+                             d_field: ti.template(), # type: ignore
+                             c_field: ti.template(), # type: ignore
+                             target: ti.template(), # type: ignore
+                             screen_width: int,
+                             screen_height: int,
+                             use_mapper: ti.template()  # type: ignore
+    ):
+
+        for screen_x, screen_y in ti.ndrange(screen_width, screen_height):
+
+            u = ti.cast(screen_x, float) / ti.cast(screen_width - 1, float)
+            v = ti.cast(screen_y, float) / ti.cast(screen_height - 1, float)
+
+            grid_x = u * ti.cast(self.grid_width - 1, float)
+            grid_y = v * ti.cast(self.grid_height - 1, float)
+
+            final_density = self._sample_data(d_field, grid_x, grid_y, self.grid_width, self.grid_height)
+
+            if final_density > 0.001:
+                final_smoke_color = ti.Vector([0.0, 0.0, 0.0, 0.0])
+
+                if ti.static(use_mapper):
+                    vel_x = u * ti.cast(self._vel_width - 1, float)
+                    vel_y = v * ti.cast(self._vel_height - 1, float)
+                    final_smoke_color = self._sample_data(self._property_colors, vel_x, vel_y, self._vel_width, self._vel_height)
+                else:
+                    final_smoke_color = self._sample_data(c_field, grid_x, grid_y, self.grid_width, self.grid_height)
+
+                background_color = target[screen_x, screen_y]
+
+                target[screen_x, screen_y] = final_smoke_color * final_density + background_color * (1.0 - final_density)
+
+    def render(self, scene: cr.Scene):
+        self._render_smoke_kernel(
+            self._density_old,
+            self._color_old,
+            scene.scene_layer,
+            scene.width,
+            scene.height,
+            self.color_mapper is not None
+        )
 
 
 

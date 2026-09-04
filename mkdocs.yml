@@ -47,7 +47,8 @@ nav:
   - Getting Started:
       - Quick Start (10 lines!): getting_started/quick_start.md
       - Building a Workspace: getting_started/building_workspace.md
-      - Advancet Setup: getting_started/advanced_setup.md
+      - Advanced Setup: getting_started/advanced_setup.md
+      - Fluid Dynamics (LBM): getting_started/fluid_sandbox.md
   - API Reference:
       - Core & Scene:
         - CoordinateSystem: coordinate_system.md
@@ -55,8 +56,13 @@ nav:
       - Visual Entities:
         - VectorField: vector_field.md
         - ParticleSystem: particle_system.md
+        - SmokeSystem: smoke_system.md
       - Math Engine:
         - Vector Math Engine: math.md
+      - Physics Engine:
+        - Fluid Simulation: fluid.md
+        - Boundary Configuration: boundary.md
+        - Colliders: colliders.md
       - Regions & Probes:
         - Region: region.md
         - Probe: probe.md

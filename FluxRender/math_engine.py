@@ -1,8 +1,15 @@
+from typing import Sequence, Callable
+import warnings
+from PIL import Image
+
+
 import numpy as np
 
-from .constants import Property
+from .constants import Property, BoundaryType
 from . import core as cr
 from .validators import _count_function_parameters, _fatal_error
+
+import taichi as ti
 
 
 class MathEngine:
@@ -21,16 +28,12 @@ class VectorMathEngine(MathEngine):
     """
 
     def __init__(self,
-                 scene: cr.Scene,
                  primary_vector_function: callable,
                  base_angle_vector = [1.0, 0.0],
                  custom_function: callable = None):
         """Initializes the VectorMathEngine with necessary functions and spatial references.
 
         Args:
-            scene (cr.Scene): The main simulation scene. Provides essential global context
-                for the mathematical engine, such as the current simulation time or coordinate
-                system boundaries required during evaluation.
             primary_vector_function (callable): The main mathematical function defining the
                 vector field. It must accept spatial coordinates (and optionally time, e.g.,
                 `def func(world_x, world_y, scene_time):`) and return a tuple of two numbers
@@ -51,7 +54,7 @@ class VectorMathEngine(MathEngine):
         """
 
         # 1. Environment Reference
-        self.scene = scene
+        self.scene = cr.get_scene()
 
         # 2. Mathematical Definitions
         self.primary_vector_function = primary_vector_function
@@ -322,7 +325,7 @@ class VectorMathEngine(MathEngine):
 
             # [Initializing the scene and coordinate system]
 
-            math_engine = fr.VectorMathEngine(scene, primary_vector_function=lambda x, y: (y, -x))
+            math_engine = fr.VectorMathEngine(primary_vector_function=lambda x, y: (y, -x))
 
             vector_component_x, vector_component_y = math_engine.evaluate_primary_vector_function(1.0, 0.0)
             print(f"Vector field at (1.0, 0.0): ({vector_component_x}, {vector_component_y})")
@@ -405,7 +408,7 @@ class VectorMathEngine(MathEngine):
 
             # [Initializing the scene and coordinate system]
 
-            math_engine = fr.VectorMathEngine(scene, primary_vector_function=lambda x, y: (y, -x))
+            math_engine = fr.VectorMathEngine(primary_vector_function=lambda x, y: (y, -x))
 
             vector_x, vector_y, velocity = math_engine.evaluate_field_and_property(fr.Property.VELOCITY, 1.0, 0.0)
             print(f"At (1.0, 0.0) -> Vector: ({vector_x}, {vector_y}), Velocity: {velocity}")

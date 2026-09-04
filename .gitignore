@@ -10,7 +10,8 @@ __pycache__/
 site/
 
 # Pliki testowe i śmieciowe
-*main*.py
+*main*
+scratchpad/
 
 # PyPI build artifacts
 build/
