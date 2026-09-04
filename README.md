@@ -1,5 +1,3 @@
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
-
 # FluxRender
 
 **A high-performance engine for mathematical vector field visualization and fluid dynamics.**
@@ -12,49 +10,50 @@ By combining a zero-redundancy math engine with a built-in Lattice Boltzmann (LB
 ---
 
 
-## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">water</span> Fluid Dynamics (Physics Engine)
+## Fluid Dynamics (Physics Engine)
 
 *   **Lattice Boltzmann Solver:** An integrated 2D fluid dynamics solver (D2Q9) that simulates aerodynamic flows, vortices, and fluid interactions directly on the GPU.
 *   **Solid Colliders:** Embed physical obstacles into the grid using mathematical inequalities (`EquationCollider`) or external alpha-channel image files (`ImageCollider`).
 *   **Boundary Control:** Configure perimeter behaviors, including velocity inflows, open outflows, and periodic (wrapping) spaces.
 *   **State Baking:** Save and load microscopic fluid distributions as binary `.npy` files to bypass lengthy spin-up calculations and resume simulations instantly.
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="assets/rib - demo.mp4" type="video/mp4">
-</video>
+https://github.com/user-attachments/assets/6593610c-cd92-4071-ac0f-34c36b57952d
+
 
 
 ---
 
 
-## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">function</span> Mathematical Evaluation
+## Mathematical Evaluation
 
 *   **Zero-Redundancy Execution:** Evaluates primary vector fields once per frame. Topological metrics (like divergence or curl) reuse pre-calculated vector data, preventing redundant GPU operations.
 *   **Automatic Vectorization & Time Injection:** Write mathematical logic in Python or NumPy. The engine inspects function signatures, handles vectorization fallbacks, and automatically injects simulation time (`t`).
 *   **Interactive Data Probes:** Map screen coordinates to mathematical space using `CursorRegion` to sample local properties or emit particles in real-time.
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="assets/fluxrender_demo.mp4" type="video/mp4">
-</video>
+
+https://github.com/user-attachments/assets/53c9c95d-02c4-493f-ab34-731bcfe57304
 
 
 
-## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">memory</span> Core Architecture & Visualization
+
+
+## Core Architecture & Visualization
 
 *   **Particle Dynamics:** Simulate, render, and track tens of thousands of particles driven natively by either the LBM fluid solver or custom mathematical vector fields.
 *   **Advanced Rendering Modes:** Arrow-based vector fields feature multiple rendering strategies (e.g., `SCREEN_FIXED`, `ZOOM_DENSITY_ADAPTIVE`), dynamically recalculating grid spacing based on camera zoom.
 *   **Visual Granularity:** Control the thickness, opacity, geometry, and anti-aliasing of visual elements. The `ColorMapper` maps scalars directly through HSL space, avoiding RGB mid-tones.
 *   **UI Integration:** A built-in UI system allows for attaching custom buttons and interaction listeners directly to the scene workspace.
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="assets/fluxrender_modes.mp4" type="video/mp4">
-</video>
+
+https://github.com/user-attachments/assets/60d9f15f-900a-443e-af2b-55ffeb8ca285
+
+
 
 ---
 
 
 
-## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">rocket_launch</span> Quick Start
+## Quick Start
 
 See the engine in action. This minimal setup creates a fully interactive, swirling vortex, evaluated and colored dynamically based on its rotational velocity.
 
@@ -73,7 +72,7 @@ fr.quick_simulate(flow_vector) # This single line sets up a full interactive sim
 
 
 
-## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">menu_book</span> Documentation
+## Documentation
 
 Dive deeper into the architecture, explore the rendering modes, and learn how to build complex physical environments in the official documentation:
 
