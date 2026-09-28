@@ -1,4 +1,4 @@
-# FluxRender
+# FluxRender - Python CFD & Vector Field Visualization
 
 **A high-performance engine for mathematical vector field visualization and fluid dynamics.**
 
@@ -76,7 +76,7 @@ fr.quick_simulate(flow_vector) # This single line sets up a full interactive sim
 
 Dive deeper into the architecture, explore the rendering modes, and learn how to build complex physical environments in the official documentation:
 
-👉 [Read the full API Reference & Guides here](./coordinate_system)
+👉 [Read the full API Reference & Guides here](https://todorokiboy.github.io/FluxRender/)
 
 
 
