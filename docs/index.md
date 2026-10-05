@@ -53,6 +53,14 @@ By combining a zero-redundancy math engine with a built-in Lattice Boltzmann (LB
 ---
 
 
+## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">download</span> Installation
+
+FluxRender is available on PyPI and can be installed via pip:
+
+```bash
+pip install fluxrender
+```
+
 
 ## <span class="material-symbols-outlined" style="font-size: 45px; vertical-align: middle; margin-right: 8px; margin-top: 0; margin-bottom: 12px">rocket_launch</span> Quick Start
 

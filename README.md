@@ -52,6 +52,14 @@ https://github.com/user-attachments/assets/60d9f15f-900a-443e-af2b-55ffeb8ca285
 ---
 
 
+## Installation
+
+FluxRender is available on PyPI and can be installed via pip:
+
+```bash
+pip install fluxrender
+```
+
 
 ## Quick Start
 
